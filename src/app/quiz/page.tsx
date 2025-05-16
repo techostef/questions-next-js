@@ -24,10 +24,6 @@ export default function QuizPage() {
     setQuizData(data);
   };
 
-  const handleLoadDifferentQuiz = () => {
-    askQuestionRef.current?.loadDifferentQuiz();
-  };
-
   // Show nothing while checking authentication
   if (!isAuthenticated) {
     return null;
@@ -50,7 +46,7 @@ export default function QuizPage() {
         </div>
         <AskQuestion onSuccess={handleQuizSubmit} ref={askQuestionRef}/>
         {quizData && (
-          <Quiz quizData={quizData} onLoadDifferentQuiz={handleLoadDifferentQuiz} />
+          <Quiz quizData={quizData} />
         )}
       </div>
     </ProtectedRoute>

@@ -21,10 +21,9 @@ export interface QuizData {
 
 interface QuizProps {
   quizData: QuizData;
-  onLoadDifferentQuiz: () => void;
 }
 
-export default function Quiz({ quizData, onLoadDifferentQuiz }: QuizProps) {
+export default function Quiz({ quizData }: QuizProps) {
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [showResults, setShowResults] = useState(false);
 
@@ -61,23 +60,15 @@ export default function Quiz({ quizData, onLoadDifferentQuiz }: QuizProps) {
             </span>
           )}
           {!showResults ? (
-            <>
-              <button
-                onClick={onLoadDifferentQuiz}
-                className="bg-gray-500 text-white px-3 py-1 rounded mr-2 text-sm"
-              >
-                Load Different Quiz
-              </button>
-              <button
-                onClick={checkAnswers}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                disabled={
-                  Object.keys(userAnswers).length < quizData.questions.length
-                }
-              >
-                Check Answers
-              </button>
-            </>
+            <button
+              onClick={checkAnswers}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+              disabled={
+                Object.keys(userAnswers).length < quizData.questions.length
+              }
+            >
+              Check Answers
+            </button>
           ) : (
             <button
               onClick={resetQuiz}
