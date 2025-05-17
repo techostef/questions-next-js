@@ -338,7 +338,7 @@ export default function SpeakPage() {
 
   return (
     <ProtectedRoute>
-      <div className="container mx-auto p-4 max-w-3xl">
+        <div className="container mx-auto p-4 max-w-3xl">
         <Navigation />
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold ml-1">Conversation with AI</h1>
