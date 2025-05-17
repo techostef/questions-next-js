@@ -1,11 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Quiz, { QuizData } from '@/components/Quiz';
-import AskQuestion, { AskQuestionMethods } from '@/components/AskQuestion';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import { useAuth } from '@/context/AuthContext';
+import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Quiz, { QuizData } from "@/components/Quiz";
+import AskQuestion, { AskQuestionMethods } from "@/components/AskQuestion";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/context/AuthContext";
+import Navigation from "@/components/Navigation";
 
 export default function QuizPage() {
   const [quizData, setQuizData] = useState<QuizData | null>(null);
@@ -16,7 +17,7 @@ export default function QuizPage() {
   // If not authenticated, redirect to login page
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/');
+      router.push("/");
     }
   }, [isAuthenticated, router]);
 
@@ -32,11 +33,12 @@ export default function QuizPage() {
   return (
     <ProtectedRoute>
       <div className="container mx-auto p-4 max-w-3xl">
+        <Navigation />
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold ml-1">English Quiz</h1>
           <div className="flex items-center">
             <span className="mr-2">Welcome, {user?.username}</span>
-            <button 
+            <button
               onClick={logout}
               className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
             >
@@ -44,10 +46,11 @@ export default function QuizPage() {
             </button>
           </div>
         </div>
-        <AskQuestion onSuccess={handleQuizSubmit} ref={askQuestionRef}/>
-        {quizData && (
-          <Quiz quizData={quizData} />
-        )}
+
+        {/* Navigation Menu */}
+
+        <AskQuestion onSuccess={handleQuizSubmit} ref={askQuestionRef} />
+        {quizData && <Quiz quizData={quizData} />}
       </div>
     </ProtectedRoute>
   );

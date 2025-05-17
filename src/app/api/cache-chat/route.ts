@@ -12,12 +12,10 @@ const URL_CACHE =
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
-    console.log("messages", messages);
 
     // If a key is provided, return the specific cached result
     if (messages) {
       const cachedResults = getCachedResult(messages);
-      console.log("cachedResults.length", cachedResults?.length);
       if (!cachedResults) {
         return new Response(
           JSON.stringify({ error: "No cached data found for this key" }),
@@ -30,11 +28,7 @@ export async function POST(req: Request) {
 
       const cachedResultLength = cachedResults.length;
       const randomIndex = Math.floor(Math.random() * cachedResultLength);
-      console.log("randomIndex", randomIndex);
       const randomCached = cachedResults[randomIndex];
-      if (randomIndex === 0) {
-        console.log("randomCached", randomCached);
-      }
 
       return Response.json({ ...randomCached });
     }
@@ -62,7 +56,6 @@ function isNotEmptyObject(obj) {
 export async function GET() {
   try {
     const cachedResults = getAllCachedResults();
-    console.log("cachedResults", cachedResults);
     if (!isNotEmptyObject(cachedResults)) {
       // fetch api
       const response = await fetch(URL_CACHE);
