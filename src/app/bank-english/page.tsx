@@ -213,7 +213,7 @@ export default function BankEnglishPage() {
                       Verb Forms
                     </h3>
                     <div className="grid grid-cols-3 gap-2 mb-4">
-                      <div className="p-2 bg-gray-50 rounded">
+                      <div className="p-2 bg-gray-50 rounded flex flex-col">
                         <span className="block text-xs text-gray-500">
                           Base Form
                         </span>
@@ -222,37 +222,37 @@ export default function BankEnglishPage() {
                         </span>
                         <button
                           onClick={() => speakCurrentWord(currentWord.v1 || currentWord.word)}
-                          className="p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
+                          className="max-w-fit p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
                           title="Listen to pronunciation and meaning"
                         >
                           <Sound />
                         </button>
                       </div>
-                      <div className="p-2 bg-gray-50 rounded">
+                      <div className="p-2 bg-gray-50 rounded flex flex-col">
                         <span className="block text-xs text-gray-500">
-                          Past Simple
+                          Verb 2
                         </span>
                         <span className="font-medium">
                           {currentWord.v2 || "-"}
                         </span>
                         <button
                           onClick={() => speakCurrentWord(currentWord.v2 || "-")}
-                          className="p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
+                          className="max-w-fit p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
                           title="Listen to pronunciation and meaning"
                         >
                           <Sound />
                         </button>
                       </div>
-                      <div className="p-2 bg-gray-50 rounded">
+                      <div className="p-2 bg-gray-50 rounded flex flex-col">
                         <span className="block text-xs text-gray-500">
-                          Past Participle
+                          Verb 3
                         </span>
                         <span className="font-medium">
                           {currentWord.v3 || "-"}
                         </span>
                         <button
                           onClick={() => speakCurrentWord(currentWord.v3 || "-")}
-                          className="p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
+                          className="max-w-fit p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
                           title="Listen to pronunciation and meaning"
                         >
                           <Sound />
