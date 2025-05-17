@@ -81,6 +81,12 @@ export default function SpeakPage() {
   const speakText = useCallback(
     (text: string) => {
       if (typeof window === "undefined") return;
+      
+      // Check if speech synthesis is supported
+      if (!('speechSynthesis' in window)) {
+        console.log("Speech synthesis not supported in this browser");
+        return; // Exit early if not supported
+      }
 
       try {
         // Cancel any ongoing speech
@@ -226,24 +232,56 @@ export default function SpeakPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Function to load voices
-    const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      setAvailableVoices(voices);
-    };
+    // Check if speech synthesis is supported
+    if (!('speechSynthesis' in window)) {
+      console.log("Speech synthesis not supported in this browser");
+      return; // Exit early if not supported
+    }
 
-    // Load voices initially
-    loadVoices();
+    try {
+      // Function to load voices
+      const loadVoices = () => {
+        try {
+          const voices = window.speechSynthesis.getVoices();
+          setAvailableVoices(voices || []);
+        } catch (error) {
+          console.error("Error loading voices:", error);
+          // Report error to logging endpoint
+          fetch('/api/log', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              name: 'SpeechSynthesisError',
+              message: 'Failed to load voices',
+              error: error instanceof Error ? error.message : String(error),
+              browser: navigator.userAgent,
+              feature: 'speechSynthesis.getVoices'
+            }),
+          }).catch(e => console.error("Failed to log error:", e));
+        }
+      };
 
-    // Some browsers (like Chrome) load voices asynchronously
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
+      // Load voices initially
+      loadVoices();
+
+      // Some browsers (like Chrome) load voices asynchronously
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
+    } catch (error) {
+      console.error("Speech synthesis error:", error);
     }
 
     return () => {
       // Cleanup: cancel any ongoing speech when component unmounts
-      if (typeof window !== "undefined") {
-        window.speechSynthesis.cancel();
+      if (typeof window !== "undefined" && 'speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch (error) {
+          console.error("Error canceling speech synthesis:", error);
+        }
       }
     };
   }, []);
