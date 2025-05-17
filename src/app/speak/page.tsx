@@ -13,6 +13,7 @@ import {
   SpeechRecognitionResultItem,
 } from "./type";
 import { Sound } from "@/assets/sound";
+import { sendErrorToServer } from "@/lib/error";
 
 interface Message {
   role: "user" | "assistant";
@@ -23,7 +24,7 @@ export default function SpeakPage() {
   // Load cached messages from localStorage (if any)
   const loadCachedMessages = (): Message[] => {
     if (typeof window === "undefined") return [];
-    
+
     try {
       const cachedMessages = localStorage.getItem("ai_conversation_history");
       if (cachedMessages) {
@@ -38,10 +39,13 @@ export default function SpeakPage() {
   // Load cached voice type from localStorage (if any)
   const loadCachedVoiceType = (): "male" | "female" | "default" => {
     if (typeof window === "undefined") return "default";
-    
+
     try {
       const cachedVoiceType = localStorage.getItem("ai_voice_preference");
-      if (cachedVoiceType && ["male", "female", "default"].includes(cachedVoiceType)) {
+      if (
+        cachedVoiceType &&
+        ["male", "female", "default"].includes(cachedVoiceType)
+      ) {
         return cachedVoiceType as "male" | "female" | "default";
       }
     } catch (error) {
@@ -54,10 +58,14 @@ export default function SpeakPage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [voiceType, setVoiceType] = useState<"male" | "female" | "default">(loadCachedVoiceType());
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voiceType, setVoiceType] = useState<"male" | "female" | "default">(
+    loadCachedVoiceType()
+  );
+  const [availableVoices, setAvailableVoices] = useState<
+    SpeechSynthesisVoice[]
+  >([]);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Load cached messages on initial render
   useEffect(() => {
     const cachedMessages = loadCachedMessages();
@@ -81,9 +89,9 @@ export default function SpeakPage() {
   const speakText = useCallback(
     (text: string) => {
       if (typeof window === "undefined") return;
-      
+
       // Check if speech synthesis is supported
-      if (!('speechSynthesis' in window)) {
+      if (!("speechSynthesis" in window)) {
         console.log("Speech synthesis not supported in this browser");
         return; // Exit early if not supported
       }
@@ -171,29 +179,29 @@ export default function SpeakPage() {
       recognitionRef.current = new (SpeechRecognition as any)();
       recognitionRef.current.continuous = false; // Changed to false for better silence detection
       recognitionRef.current.interimResults = true;
-      
+
       // Add language setting to improve recognition
-      recognitionRef.current.lang = 'en-US';
+      recognitionRef.current.lang = "en-US";
 
       // Track the last speech detection time
       let lastSpeechTime = 0;
-      
+
       // Set up speech detection and end events
       recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
         lastSpeechTime = Date.now();
-        
+
         const transcript = Array.from(event.results)
           .map((result: SpeechRecognitionResult) => result[0])
           .map((result: SpeechRecognitionResultItem) => result.transcript)
           .join("");
 
         setInput(transcript);
-        
+
         // Start the auto-stop timer after getting results
         if (silenceTimerRef.current) {
           clearTimeout(silenceTimerRef.current);
         }
-        
+
         silenceTimerRef.current = setTimeout(() => {
           if (recognitionRef.current && Date.now() - lastSpeechTime >= 2000) {
             console.log("Auto-stopping after 2 seconds of silence");
@@ -202,12 +210,12 @@ export default function SpeakPage() {
           }
         }, 2000);
       };
-      
+
       // This event fires when recognition stops for any reason
       recognitionRef.current.onend = () => {
         console.log("Speech recognition ended");
         setIsListening(false);
-        
+
         // Clear the silence timer if it exists
         if (silenceTimerRef.current) {
           clearTimeout(silenceTimerRef.current);
@@ -233,7 +241,7 @@ export default function SpeakPage() {
     if (typeof window === "undefined") return;
 
     // Check if speech synthesis is supported
-    if (!('speechSynthesis' in window)) {
+    if (!("speechSynthesis" in window)) {
       console.log("Speech synthesis not supported in this browser");
       return; // Exit early if not supported
     }
@@ -245,21 +253,7 @@ export default function SpeakPage() {
           const voices = window.speechSynthesis.getVoices();
           setAvailableVoices(voices || []);
         } catch (error) {
-          console.error("Error loading voices:", error);
-          // Report error to logging endpoint
-          fetch('/api/log', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              name: 'SpeechSynthesisError',
-              message: 'Failed to load voices',
-              error: error instanceof Error ? error.message : String(error),
-              browser: navigator.userAgent,
-              feature: 'speechSynthesis.getVoices'
-            }),
-          }).catch(e => console.error("Failed to log error:", e));
+          sendErrorToServer(error, { componentStack: "speechSynthesis.getVoices" });
         }
       };
 
@@ -276,7 +270,7 @@ export default function SpeakPage() {
 
     return () => {
       // Cleanup: cancel any ongoing speech when component unmounts
-      if (typeof window !== "undefined" && 'speechSynthesis' in window) {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
         try {
           window.speechSynthesis.cancel();
         } catch (error) {
@@ -293,7 +287,10 @@ export default function SpeakPage() {
     // Cache conversation history in localStorage
     if (typeof window !== "undefined" && messages.length > 0) {
       try {
-        localStorage.setItem("ai_conversation_history", JSON.stringify(messages));
+        localStorage.setItem(
+          "ai_conversation_history",
+          JSON.stringify(messages)
+        );
       } catch (error) {
         console.error("Error caching conversation history:", error);
       }
@@ -376,7 +373,7 @@ export default function SpeakPage() {
 
   return (
     <ProtectedRoute>
-        <div className="container mx-auto p-4 max-w-3xl">
+      <div className="container mx-auto p-4 max-w-3xl">
         <Navigation />
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold ml-1">Conversation with AI</h1>
@@ -468,13 +465,16 @@ export default function SpeakPage() {
                   >
                     {message.content}
                     {message.role === "assistant" && (
-                      <button
-                        onClick={() => speakText(message.content)}
-                        className="mt-2 text-gray-500 hover:text-gray-700 inline-flex items-center"
-                        title="Listen to this response"
-                      >
-                        <Sound />
-                      </button>
+                      <>
+                        <br />
+                        <button
+                          onClick={() => speakText(message.content)}
+                          className="mt-2 text-gray-500 hover:text-gray-700 inline-flex items-center"
+                          title="Listen to this response"
+                        >
+                          <Sound />
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
