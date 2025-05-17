@@ -167,16 +167,33 @@ export default function SpeakPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Setup speech recognition
+  // Initialize speech recognition when component mounts
   useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
-    ) {
-      // Using type assertion to handle the possibly undefined window
+    // Only run in browser environment
+    if (typeof window === "undefined") return;
+
+    // Check for browser support
+    try {
+      // Check if we're in Firefox (which doesn't support SpeechRecognition well)
+      const isFirefox = navigator.userAgent.indexOf("Firefox") !== -1;
+      
+      // Firefox detection - show notice in console but don't try to initialize
+      if (isFirefox) {
+        console.log("Firefox detected. Speech recognition may not work properly.");
+        // We'll still attempt to initialize but warn the user
+      }
+      
       const SpeechRecognition =
-        (window as Window).SpeechRecognition ||
-        (window as Window).webkitSpeechRecognition;
+        window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.error("Speech Recognition API not supported in this browser");
+        sendErrorToServer(new Error("Speech Recognition not supported"), { 
+          componentStack: "Browser doesn't support SpeechRecognition or webkitSpeechRecognition",
+          browser: navigator.userAgent
+        });
+        return;
+      }
+
       recognitionRef.current = new (SpeechRecognition as any)();
       recognitionRef.current.continuous = false; // Changed to false for better silence detection
       recognitionRef.current.interimResults = true;
@@ -223,11 +240,28 @@ export default function SpeakPage() {
           silenceTimerRef.current = null;
         }
       };
-
+      
+      // Handle errors in speech recognition
       recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error("Speech recognition error", event.error);
+        console.error("Speech recognition error:", event.error);
+        setIsListening(false);
+        
+        // Send detailed error info to the server
+        sendErrorToServer(
+          new Error(`Speech recognition error: ${event.error}`),
+          { componentStack: `SpeechRecognition.onerror: ${event.error}` }
+        );
+        
+        // Clear any timers
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
         setIsListening(false);
       };
+
+    } catch (error) {
+      console.error("Error initializing speech recognition:", error);
     }
 
     return () => {
@@ -309,7 +343,13 @@ export default function SpeakPage() {
   }, [messages, speakText]);
 
   const toggleListening = () => {
-    if (!recognitionRef.current) return;
+    if (!recognitionRef.current) {
+      console.error("Speech recognition not initialized");
+      sendErrorToServer(new Error("Speech recognition not initialized"), {
+        componentStack: "toggleListening failed because recognitionRef is null"
+      });
+      return;
+    }
 
     if (isListening) {
       // Clear any existing silence timer when manually stopping
@@ -317,12 +357,26 @@ export default function SpeakPage() {
         clearTimeout(silenceTimerRef.current);
         silenceTimerRef.current = null;
       }
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error("Error stopping speech recognition:", error);
+        sendErrorToServer(error as Error, { componentStack: "recognitionRef.current.stop()" });
+        // Force update the listening state since the onend might not fire
+        setIsListening(false);
+      }
       // Don't set isListening here, let the onend handler do it
     } else {
       // Only update state and start recognition when turning on
       setIsListening(true);
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error("Error starting speech recognition:", error);
+        sendErrorToServer(error as Error, { componentStack: "recognitionRef.current.start()" });
+        // Reset the state since we failed to start
+        setIsListening(false);
+      }
     }
   };
 
@@ -525,26 +579,23 @@ export default function SpeakPage() {
               <button
                 type="button"
                 onClick={toggleListening}
-                className={`p-2 rounded-full ${
-                  isListening
-                    ? "bg-red-500 text-white"
-                    : "bg-gray-200 text-gray-600"
-                }`}
+                className={`p-2 rounded-full ${isListening ? "bg-red-500" : "bg-green-500"} text-white mr-2`}
                 title={isListening ? "Stop listening" : "Start listening"}
+                disabled={!recognitionRef.current}
               >
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
+                  className="w-5 h-5"
                   fill="none"
-                  viewBox="0 0 24 24"
                   stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                  />
+                    strokeWidth="2"
+                    d={isListening ? "M21 12a9 9 0 11-18 0 9 9 0 0118 0z M10 9v6m4-6v6" : "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"}
+                  ></path>
                 </svg>
               </button>
               <input

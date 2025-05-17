@@ -33,7 +33,9 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   logErrorToServer = async (error: Error, errorInfo: ErrorInfo): Promise<void> => {
-   sendErrorToServer(error, errorInfo);
+   sendErrorToServer(error, {
+     componentStack: errorInfo.componentStack
+   });
   };
 
   render(): ReactNode {
