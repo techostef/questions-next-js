@@ -22,6 +22,14 @@ export default function Navigation() {
             Speak
           </button>
         </li>
+        <li className="mr-6">
+          <button
+            onClick={() => router.push("/bank-english")}
+            className="text-blue-600 hover:text-blue-800 font-medium"
+          >
+            Bank English
+          </button>
+        </li>
       </ul>
     </nav>
   );

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import VoiceSelector from "@/components/VoiceSelector";
 import {
   SpeechRecognition,
   SpeechRecognitionErrorEvent,
@@ -14,6 +15,7 @@ import {
 } from "./type";
 import { Sound } from "@/assets/sound";
 import { sendErrorToServer } from "@/lib/error";
+import { Mic } from "@/assets/mic";
 
 interface Message {
   role: "user" | "assistant";
@@ -444,58 +446,9 @@ export default function SpeakPage() {
         </div>
 
         {/* Voice selection controls */}
-        <div className="mb-4 p-3 bg-gray-100 rounded-lg">
-          <div className="flex items-center">
-            <span className="mr-3 font-medium">AI Voice:</span>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => {
-                  setVoiceType("default");
-                  if (typeof window !== "undefined") {
-                    localStorage.setItem("ai_voice_preference", "default");
-                  }
-                }}
-                className={`px-3 py-1 rounded ${
-                  voiceType === "default"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200"
-                }`}
-              >
-                Default
-              </button>
-              <button
-                onClick={() => {
-                  setVoiceType("male");
-                  if (typeof window !== "undefined") {
-                    localStorage.setItem("ai_voice_preference", "male");
-                  }
-                }}
-                className={`px-3 py-1 rounded ${
-                  voiceType === "male"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200"
-                }`}
-              >
-                Male
-              </button>
-              <button
-                onClick={() => {
-                  setVoiceType("female");
-                  if (typeof window !== "undefined") {
-                    localStorage.setItem("ai_voice_preference", "female");
-                  }
-                }}
-                className={`px-3 py-1 rounded ${
-                  voiceType === "female"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200"
-                }`}
-              >
-                Female
-              </button>
-            </div>
-          </div>
-        </div>
+        <VoiceSelector 
+          onChange={(type) => setVoiceType(type)}
+        />
 
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="h-96 overflow-y-auto p-4 bg-gray-50">
@@ -583,20 +536,7 @@ export default function SpeakPage() {
                 title={isListening ? "Stop listening" : "Start listening"}
                 disabled={!recognitionRef.current}
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d={isListening ? "M21 12a9 9 0 11-18 0 9 9 0 0118 0z M10 9v6m4-6v6" : "M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"}
-                  ></path>
-                </svg>
+                <Mic isListening={isListening} />
               </button>
               <input
                 type="text"
