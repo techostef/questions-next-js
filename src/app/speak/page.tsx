@@ -156,6 +156,7 @@ export default function SpeakPage() {
         // Start speaking
         window.speechSynthesis.speak(utterance);
       } catch (error) {
+        sendErrorToServer(error, { componentStack: "speechSynthesis.speak" });
         console.error("Speech synthesis error:", error);
       }
     },
