@@ -31,7 +31,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Cache is now managed by the shared cache module
+const GIST_ID = 'ad1d8a1f85b5e6f4fa5092b0b5b982d4';
+
+const URL_CACHE =
+  `https://gist.githubusercontent.com/techostef/${GIST_ID}/raw/english.json`;
 
 export async function POST(req) {
   try {
@@ -46,6 +49,41 @@ export async function POST(req) {
         ...messagesWithSystem,
         { role: "user" as any, content: messages + additionalMessage },
       ],
+    });
+
+    // Get data list questions from gists
+    const response = await fetch(URL_CACHE);
+    const data = await response.json();
+    const result = data?.result ? { ...data?.result } : { ...data };
+    if (result[messages]) {
+      result[messages].push(completion.choices[0].message);
+    } else {
+      result[messages] = [completion.choices[0].message];
+    }
+
+    // Format date in Jakarta timezone (UTC+7)
+    const jakartaTime = new Date();
+    jakartaTime.setHours(jakartaTime.getHours() + 7);
+    const jakartaTimeString = jakartaTime.toISOString().replace('Z', '+07:00');
+    
+    const updateData = {
+      description: `Updated via API on ${jakartaTimeString}`,
+      files: {
+        'english.json': {
+          content: JSON.stringify(result)
+        }
+      }
+    };
+    
+    // Call GitHub API to update the Gist
+    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `token ${process.env.GIT_UPDATE_SECRET}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      body: JSON.stringify(updateData)
     });
 
     // Store the result in our shared cache

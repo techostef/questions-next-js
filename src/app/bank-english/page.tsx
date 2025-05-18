@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Navigation from "@/components/Navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import VoiceSelector from "@/components/VoiceSelector";
+import AddWordDialog from "@/components/AddWordDialog";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { Sound } from "@/assets/sound";
 
@@ -27,6 +28,9 @@ export default function BankEnglishPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showMeaning, setShowMeaning] = useState<boolean>(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false);
+  const [isAddingWords, setIsAddingWords] = useState<boolean>(false);
+  const [addWordStatus, setAddWordStatus] = useState<{success?: boolean, message?: string}>({});
   const { speak } = useSpeechSynthesis();
 
   // Function to speak the current word and its details
@@ -35,29 +39,71 @@ export default function BankEnglishPage() {
   };
 
   // Fetch vocabulary data from API
-  useEffect(() => {
-    const fetchWords = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/bank-english");
+  const fetchWords = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/bank-english");
 
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        setWords(data);
-        setError(null);
-      } catch (err) {
-        console.error("Failed to fetch vocabulary data:", err);
-        setError("Failed to load vocabulary data. Please try again later.");
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status} ${response.statusText}`);
       }
-    };
 
+      const data = await response.json();
+      setWords(data);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch vocabulary data:", err);
+      setError("Failed to load vocabulary data. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchWords();
   }, []);
+  
+  const handleAddWords = async (wordsList: string[]) => {
+    try {
+      setIsAddingWords(true);
+      
+      const response = await fetch('/api/bank-english/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ words: wordsList }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to add words');
+      }
+      
+      setAddWordStatus({
+        success: true,
+        message: result.message || 'Words added successfully'
+      });
+      
+      // Refresh the word list
+      fetchWords();
+      
+      // Clear status message after 5 seconds
+      setTimeout(() => setAddWordStatus({}), 5000);
+    } catch (err) {
+      console.error('Error adding words:', err);
+      setAddWordStatus({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to add words'
+      });
+      
+      // Clear error message after 5 seconds
+      setTimeout(() => setAddWordStatus({}), 5000);
+    } finally {
+      setIsAddingWords(false);
+    }
+  };
 
   // Handle navigation
   const goToPrevious = () => {
@@ -88,9 +134,28 @@ export default function BankEnglishPage() {
     <ProtectedRoute>
       <div className="container mx-auto p-4 max-w-4xl">
         <Navigation />
-        <h1 className="text-3xl font-bold mt-6 mb-4 text-center">
-          English Vocabulary Bank
-        </h1>
+        <div className="flex justify-between items-center mt-6 mb-4">
+          <h1 className="text-3xl font-bold text-center flex-grow">
+            English Vocabulary Bank
+          </h1>
+          <button
+            onClick={() => setIsAddDialogOpen(true)}
+            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center"
+            title="Add new words to your dictionary"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Add Words
+          </button>
+        </div>
+        
+        {/* Status message */}
+        {addWordStatus.message && (
+          <div className={`p-4 mb-4 rounded-lg text-center ${addWordStatus.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {addWordStatus.message}
+          </div>
+        )}
 
         {/* Voice selector component */}
         <VoiceSelector />
@@ -193,7 +258,7 @@ export default function BankEnglishPage() {
                         <h3 className="text-lg font-semibold text-gray-700 mb-2">
                           Synonyms
                         </h3>
-                        <p className="text-gray-600">
+                        <p className="text-gray-600 wrap-break-word">
                           {currentWord.synonyms || "None"}
                         </p>
                       </div>
@@ -356,6 +421,14 @@ export default function BankEnglishPage() {
             <p className="text-gray-600">No vocabulary words found.</p>
           </div>
         )}
+        
+        {/* Add Word Dialog */}
+        <AddWordDialog
+          isOpen={isAddDialogOpen}
+          onClose={() => setIsAddDialogOpen(false)}
+          onSubmit={handleAddWords}
+          isLoading={isAddingWords}
+        />
       </div>
     </ProtectedRoute>
   );
