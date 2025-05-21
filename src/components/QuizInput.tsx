@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QuizData } from './Quiz';
+import { QuizData } from './type';
 
 interface QuizInputProps {
   onQuizSubmit: (data: QuizData) => void;
