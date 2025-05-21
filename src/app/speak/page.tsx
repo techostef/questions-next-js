@@ -7,7 +7,6 @@ import VoiceSelector from "@/components/VoiceSelector";
 import Navigation from "@/components/Navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { Mic } from "@/assets/mic";
-import io from "socket.io-client";
 import { Sound } from "@/assets/sound";
 
 interface Message {
@@ -23,14 +22,14 @@ export default function StreamPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
 
   // Refs for handling recording and connections
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const socketRef = useRef<any>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const minRecordTimeReachedRef = useRef<boolean>(false);
   const recordingStartTimeRef = useRef<number>(0);
-  const messagesEndRef = useRef<HTMLDivElement>(null); // Ref for auto-scrolling
+  const sessionIdRef = useRef<string>(""); // For tracking API session
 
   // Speech synthesis hook for voice output
   const { speak, stop } = useSpeechSynthesis();
@@ -108,15 +107,73 @@ export default function StreamPage() {
       // Handle audio data
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
-          // Send audio data to server
-          if (socketRef.current?.connected) {
-            socketRef.current.emit("audio-chunk", event.data);
-          }
+          // Store audio chunks for later processing
+          audioChunksRef.current.push(event.data);
         }
       };
 
       // Handle recording stop
-      recorder.onstop = () => {};
+      recorder.onstop = async () => {
+        // Process the recorded audio after stopping
+        if (audioChunksRef.current.length > 0) {
+          setIsProcessing(true);
+          
+          try {
+            // Create an audio blob from all chunks
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            
+            // Create form data for API request
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.webm');
+            
+            // Add session ID to headers if available
+            const headers: HeadersInit = {};
+            if (sessionIdRef.current) {
+              headers['x-session-id'] = sessionIdRef.current;
+            }
+            
+            // Send to our API endpoint
+            const response = await fetch('/api/audio/transcript', {
+              method: 'POST',
+              body: formData,
+              headers
+            });
+            
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Failed to process audio');
+            }
+            
+            const data = await response.json();
+            
+            // Set transcript and AI response
+            setTranscript(data.transcript);
+            setAiResponse(data.aiResponse);
+            
+            // Add messages to conversation
+            setMessages(prev => [
+              ...prev,
+              { role: 'user', content: data.transcript },
+              { role: 'assistant', content: data.aiResponse }
+            ]);
+            
+            // Save conversation history from server if provided
+            if (data.conversationHistory && Array.isArray(data.conversationHistory)) {
+              localStorage.setItem('streamChatHistory', JSON.stringify(data.conversationHistory));
+            }
+            
+            // Speak the AI response
+            speak(data.aiResponse);
+            
+          } catch (err: any) {
+            setError(`Error: ${err.message || 'Something went wrong'}`);
+            console.error('Audio processing error:', err);
+          } finally {
+            setIsProcessing(false);
+            audioChunksRef.current = []; // Clear chunks for next recording
+          }
+        }
+      };
 
       // Start recording
       recorder.start(1000); // Capture in 1-second chunks
@@ -144,13 +201,56 @@ export default function StreamPage() {
     }
   }
 
-  // Reset conversation
+  // Reset current conversation (just the UI state)
   function resetConversation() {
-    setMessages([]);
     setTranscript("");
     setAiResponse("");
+    setMessages([]);
     setError(null);
     stop(); // Stop any ongoing speech
+  }
+  
+  // Clear conversation history (both local and server storage)
+  async function clearHistory() {
+    setIsProcessing(true);
+    stop(); // Stop any ongoing speech if playing
+    
+    try {
+      // Clear local storage
+      localStorage.removeItem('streamChatHistory');
+      
+      // Reset messages in UI
+      setMessages([]);
+      setTranscript("");
+      setAiResponse("");
+      setError(null);
+      
+      // Clear server-side conversation history
+      const headers: HeadersInit = {};
+      if (sessionIdRef.current) {
+        headers['x-session-id'] = sessionIdRef.current;
+      }
+      
+      // Call the DELETE endpoint to clear server-side history
+      const response = await fetch('/api/audio/transcript', {
+        method: 'DELETE',
+        headers
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to clear conversation history');
+      }
+      
+      // Show temporary success message
+      setError("Conversation history cleared successfully");
+      setTimeout(() => setError(null), 3000);
+    } catch (err: any) {
+      setError(`Error clearing history: ${err.message || 'Something went wrong'}`);
+      console.error('History clearing error:', err);
+    } finally {
+      setIsProcessing(false);
+    }
   }
 
   // Load saved conversation history from localStorage on initial mount
@@ -161,7 +261,6 @@ export default function StreamPage() {
         const parsedHistory = JSON.parse(savedHistory) as Message[];
         if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
           setMessages(parsedHistory);
-          setIsHistoryLoaded(true);
         }
       }
     } catch (err) {
@@ -176,114 +275,57 @@ export default function StreamPage() {
     }
   }, [messages]);
 
-  // Initialize socket connection
+  // Load conversation history on initial render
   useEffect(() => {
-    // Use existing socket or create new one
-    // We use a singleton socket to prevent multiple connections
-    if (!socketRef.current) {
-      const socket = io({
-        // Prevent reconnection attempts from creating multiple connections
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        // Do not auto-close the connection if it appears inactive
-        timeout: 60000,
-      });
-      socketRef.current = socket;
-    }
-
-    // Store stopRecording in a ref to avoid dependencies issues
-    const handleStopRecording = () => {
-      if (isRecording && mediaRecorderRef.current) {
-        if (mediaRecorderRef.current.state === "recording") {
-          mediaRecorderRef.current.stop();
-
-          if (mediaRecorderRef.current.stream) {
-            mediaRecorderRef.current.stream
-              .getTracks()
-              .forEach((track) => track.stop());
+    const loadConversationHistory = async () => {
+      // First try to load from localStorage
+      try {
+        const savedHistory = localStorage.getItem('streamChatHistory');
+        if (savedHistory) {
+          const history = JSON.parse(savedHistory);
+          if (Array.isArray(history) && history.length > 0) {
+            setMessages(history);
+            return; // Don't fetch from API if we have local history
           }
         }
-        setIsRecording(false);
-        minRecordTimeReachedRef.current = false;
+      } catch (err) {
+        console.error('Error loading from localStorage:', err);
+      }
+      
+      // If no local history, try to get from API
+      try {
+        const response = await fetch('/api/audio/transcript', {
+          headers: sessionIdRef.current ? { 'x-session-id': sessionIdRef.current } : {}
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.conversationHistory && Array.isArray(data.conversationHistory)) {
+            setMessages(data.conversationHistory);
+            
+            // Also save to localStorage
+            localStorage.setItem('streamChatHistory', JSON.stringify(data.conversationHistory));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching conversation history:', err);
       }
     };
-
-    // Set up all socket event handlers
-    const socket = socketRef.current;
-
-    // Basic socket lifecycle events
-    socket.on("connect", () => {
-      // When we connect to the server, send our saved history if we have it
-      if (messages.length > 0) {
-        socket.emit('load_conversation', messages);
-      }
-    });
-
-    socket.on("disconnect", () => {});
     
-    // Listen for conversation history from the server
-    socket.on("conversation_history", (serverHistory) => {
-      if (Array.isArray(serverHistory) && serverHistory.length > 0 && !isHistoryLoaded) {
-        // Only set messages if we don't already have a history loaded from localStorage
-        setMessages(serverHistory);
-        setIsHistoryLoaded(true);
+    // Generate a persistent session ID if we don't have one
+    if (!sessionIdRef.current) {
+      const storedSessionId = localStorage.getItem('speakSessionId');
+      if (storedSessionId) {
+        sessionIdRef.current = storedSessionId;
+      } else {
+        // Generate a random session ID
+        sessionIdRef.current = Math.random().toString(36).substring(2);
+        localStorage.setItem('speakSessionId', sessionIdRef.current);
       }
-    });
-
-    // Handle transcript from server
-    socket.on("transcript", (text) => {
-      setTranscript(text);
-
-      // Add to messages
-      setMessages((prev) => [...prev, { role: "user", content: text }]);
-
-      // Stop recording if minimum time has passed
-      if (minRecordTimeReachedRef.current && isRecording) {
-        handleStopRecording();
-      }
-    });
-
-    // Handle AI response chunks
-    socket.on("ai-text-chunk", (chunk) => {
-      setAiResponse((prev) => prev + chunk);
-    });
-
-    // Handle complete AI response
-    socket.on("ai-text-complete", (text) => {
-      setAiResponse(text);
-      setMessages((prev) => [...prev, { role: "assistant", content: text }]);
-      speak(text);
-      setIsProcessing(false);
-    });
-
-    // Handle errors
-    socket.on("error", (errorMsg) => {
-      setError(errorMsg);
-      setIsProcessing(false);
-
-      if (isRecording) {
-        handleStopRecording();
-      }
-    });
-
-    // Clean up event listeners on re-render, but keep socket alive
-    return () => {
-      // Remove current listeners to prevent duplicates
-      socket.off("transcript");
-      socket.off("ai-text-chunk");
-      socket.off("ai-text-complete");
-      socket.off("error");
-      socket.off("conversation_history");
-
-      // Stop recording if active
-      if (isRecording && mediaRecorderRef.current) {
-        handleStopRecording();
-      }
-
-      // Note: We're not disconnecting the socket here to prevent disconnection
-      // during page transitions. Socket will be reused on reconnect.
-    };
-  }, [isRecording, speak, messages, isHistoryLoaded]);
+    }
+    
+    loadConversationHistory();
+  }, []);
 
   return (
     <ProtectedRoute>
@@ -368,7 +410,7 @@ export default function StreamPage() {
           )}
 
           {/* Controls */}
-          <div className="flex justify-center items-center gap-4">
+          <div className="flex justify-center items-center gap-4 flex-wrap">
             <button
               onClick={toggleRecording}
               disabled={isProcessing}
@@ -377,15 +419,31 @@ export default function StreamPage() {
                   ? "bg-red-500 hover:bg-red-600"
                   : "bg-blue-500 hover:bg-blue-600"
               } text-white transition-colors`}
+              title={isRecording ? "Stop recording" : "Start recording"}
             >
               <Mic isListening={isRecording} />
             </button>
 
             <button
               onClick={resetConversation}
+              disabled={isProcessing}
               className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors"
+              title="Reset current conversation"
             >
               Reset
+            </button>
+            
+            <button
+              onClick={clearHistory}
+              disabled={isProcessing || messages.length === 0}
+              className="px-6 py-3 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors flex items-center gap-2"
+              title="Clear all conversation history from both local storage and server"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+              </svg>
+              Clear History
             </button>
           </div>
         </div>
