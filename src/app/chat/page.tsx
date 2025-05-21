@@ -332,17 +332,7 @@ export default function ChatPage() {
         console.error("Error caching conversation history:", error);
       }
     }
-
-    // Speak the latest assistant message if there is one
-    const latestMessage = messages[messages.length - 1];
-    if (
-      latestMessage &&
-      latestMessage.role === "assistant" &&
-      typeof window !== "undefined"
-    ) {
-      speakText(latestMessage.content);
-    }
-  }, [messages, speakText]);
+  }, [messages]);
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
