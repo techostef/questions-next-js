@@ -1,32 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Navigation from "@/components/Navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import VoiceSelector from "@/components/VoiceSelector";
 import AddWordDialog from "@/components/AddWordDialog";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { Sound } from "@/assets/sound";
+import { EnglishWord, useVocabulary, VOCABULARY_QUERY_KEY } from "@/hooks/useVocabulary";
+import { useQueryClient } from "@tanstack/react-query";
 
-interface EnglishWord {
-  word: string;
-  mean: string;
-  description: string;
-  antonym: string;
-  synonyms: string;
-  v1: string;
-  v2: string;
-  v3: string;
-  exampleSentence1: string;
-  exampleSentence2: string;
-  exampleSentence3: string;
-}
+// Now using the EnglishWord interface from useVocabulary hook
 
 export default function BankEnglishPage() {
-  const [words, setWords] = useState<EnglishWord[]>([]);
+  // Access the query client for cache invalidation
+  const queryClient = useQueryClient();
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [showMeaning, setShowMeaning] = useState<boolean>(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false);
   const [isAddingWords, setIsAddingWords] = useState<boolean>(false);
@@ -35,36 +24,19 @@ export default function BankEnglishPage() {
   const [searchResults, setSearchResults] = useState<EnglishWord[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const { speak } = useSpeechSynthesis();
+  
+  // Using React Query to fetch vocabulary data
+  const { data: words = [], isLoading: loading, error: queryError } = useVocabulary();
 
   // Function to speak the current word and its details
   const speakCurrentWord = (textToSpeak: string) => {
     speak(textToSpeak);
   };
 
-  // Fetch vocabulary data from API
-  const fetchWords = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/bank-english");
+  // Error handling for React Query
+  const error = queryError ? "Failed to load vocabulary data. Please try again later." : null;
 
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setWords(data);
-      setError(null);
-    } catch (err) {
-      console.error("Failed to fetch vocabulary data:", err);
-      setError("Failed to load vocabulary data. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchWords();
-  }, []);
+  // No longer need manual fetchWords function or useEffect since React Query handles that
   
   // Handle word search functionality
   const handleSearch = (query: string) => {
@@ -95,6 +67,7 @@ export default function BankEnglishPage() {
     }
   };
   
+  // Get the queryClient to invalidate queries
   const handleAddWords = async (wordsList: string[]) => {
     try {
       setIsAddingWords(true);
@@ -118,8 +91,9 @@ export default function BankEnglishPage() {
         message: result.message || 'Words added successfully'
       });
       
-      // Refresh the word list
-      fetchWords();
+      // React Query will automatically refetch when we invalidate the query
+      // This replaces the manual fetchWords() call
+      queryClient.invalidateQueries({ queryKey: VOCABULARY_QUERY_KEY });
       
       // Clear status message after 5 seconds
       setTimeout(() => setAddWordStatus({}), 5000);

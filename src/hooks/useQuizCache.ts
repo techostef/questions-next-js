@@ -64,7 +64,6 @@ export const useQuizCache = () => {
       // Invalidate related queries when we successfully fetch from cache
       queryClient.invalidateQueries({ queryKey: QUIZ_CACHE_KEYS.all_cache() });
     },
-    gcTime: 60 * 60 * 1000, // 1 hour
   });
   
   // Query for fetching all cached quizzes
@@ -72,6 +71,8 @@ export const useQuizCache = () => {
     queryKey: QUIZ_CACHE_KEYS.all_cache(),
     queryFn: fetchAllCachedQuizzes,
     enabled: false, // Don't fetch on component mount
+    staleTime: 60 * 60 * 1000, // Consider data fresh for 1 hour
+    gcTime: 60 * 60 * 1000, // 1 hour
   });
   
   // Function to get all cached quizzes
