@@ -1,27 +1,6 @@
 import React, { useState } from "react";
 import QuizQuestion from "./QuizQuestion";
-
-interface Option {
-  a: string;
-  b: string;
-  c: string;
-  d: string;
-}
-
-interface Question {
-  question: string;
-  options: Option;
-  answer: string;
-  reason: string;
-}
-
-export interface QuizData {
-  questions: Question[];
-}
-
-interface QuizProps {
-  quizData: QuizData;
-}
+import type { QuizProps } from "./type";
 
 export default function Quiz({ quizData }: QuizProps) {
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
@@ -50,7 +29,7 @@ export default function Quiz({ quizData }: QuizProps) {
   };
 
   return (
-    <div className="mb-6">
+    <div className="mb-6 mt-4">
       <div className="flex flex-col items-center mb-4">
         <h2 className="text-xl">Questions</h2>
         <div className="flex">

@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Quiz, { QuizData } from "@/components/Quiz";
+import Quiz from "@/components/Quiz";
 import AskQuestion, { AskQuestionMethods } from "@/components/AskQuestion";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
+import type { QuizData } from "@/components/type";
 
 export default function QuizPage() {
   const [quizData, setQuizData] = useState<QuizData | null>(null);

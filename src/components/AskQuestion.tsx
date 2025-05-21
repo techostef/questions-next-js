@@ -1,7 +1,9 @@
 "use client";
 
+import { cleanUpResult } from "@/lib/string";
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useQuizCache } from "@/hooks/useQuizCache";
 
 interface Questions {
   questions: {
@@ -26,34 +28,40 @@ export interface AskQuestionMethods {
   loadDifferentQuiz: () => Promise<void>;
 }
 
-// Define proper types for the data in cleanUpResult
-type ContentObject = { content?: string };
-type APIResponse = string | ContentObject;
-
 const CACHE_KEY = "english_quiz_cached_questions";
 const MAX_CACHED_QUESTIONS = 10; // Maximum number of questions to store
 
 const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
   ({ onSuccess }, ref) => {
+    const [isLoadingMain, setIsLoadingMain] = useState(false);
     const [cacheInput, setCacheInput] = useState("");
     const [cachedQuestions, setCachedQuestions] = useState<string[]>([]);
     const [showCachedQuestions, setShowCachedQuestions] = useState(false);
     const [selectedCacheIndex, setSelectedCacheIndex] = useState<number>(0);
     const [countCacheQuestions, setCountCacheQuestions] = useState<number>(0);
+    
+    // Initialize the quiz cache hook
+    const {
+      data,
+      getAllFromCache,
+      isLoading: isLoadingAllCache,
+      errorMessage,
+      clearError
+    } = useQuizCache();
+    
     // Setup react-hook-form
     const {
       register,
       handleSubmit,
       setValue,
-      setError,
+      setError: setFormError,
       watch,
       formState: { errors },
-      reset
+      reset,
     } = useForm<{ question: string }>({ defaultValues: { question: "" } });
     const questionValue = watch("question");
-    const [loading, setLoading] = useState(false);
-    const [showMessages, setShowMessages] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
+
+    const isLoading = isLoadingMain || isLoadingAllCache;
 
     // Load cached questions from localStorage on component mount
     useEffect(() => {
@@ -73,23 +81,16 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
       }
     }, []);
 
-    const updateCountCacheQuestions = async (customQuestion?: string) => {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/cache-quiz/count", {
-          method: "POST",
-          body: JSON.stringify({ messages: customQuestion || questionValue }),
-        });
-        if (res.status !== 200) {
-          throw new Error("Failed to fetch data");
-        }
-        const data = await res.json();
-        setCountCacheQuestions(data);
-      } catch (error) {
-        console.error("Error updating count cache questions:", error);
-      } finally {
-        setLoading(false);
+    useEffect(() => {
+      if (data && questionValue) {
+        const cleanedResult = cleanUpResult(data[questionValue][selectedCacheIndex]);
+        onSuccess(cleanedResult);
       }
+    }, [data, questionValue, selectedCacheIndex]);
+
+    const updateCountCacheQuestions = async (customQuestion?: string) => {
+      setCountCacheQuestions(data[customQuestion || questionValue].length);
+      setSelectedCacheIndex(0);
     };
 
     // Function to select a cached question
@@ -134,7 +135,9 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
           throw new Error("Failed to fetch data");
         }
         const data = await res.json();
-        const filteredData = data.filter((item: string) => !cachedQuestions.includes(item));
+        const filteredData = data.filter(
+          (item: string) => !cachedQuestions.includes(item)
+        );
         setCachedQuestions(filteredData);
       } catch (error) {
         console.error("Error getting categories:", error);
@@ -146,107 +149,19 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
       getCategories();
     }, []);
 
-    const getAllFromCache = async () => {
-      setErrorMessage("")
-      try {
-        setLoading(true);
-        const res = await fetch("/api/cache-quiz", {
-          method: "GET",
-        });
-        if (res.status !== 200) {
-          throw new Error("Failed to fetch data");
-        }
-
-        alert("All cached data retrieved successfully");
-      } catch (error) {
-        console.error("Error getting cached data:", error);
-        if (error instanceof Error) {
-          setErrorMessage(error.message);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const getFromCache = async (customPrompt?: string) => {
-      setErrorMessage("")
-      try {
-        setLoading(true);
-        const messageContent = customPrompt || questionValue;
-        if (!messageContent.trim()) {
-          setError("question", {
-            type: "required",
-            message: "Please enter a question",
-          });
-          return;
-        }
-
-        // Use the selected cache index if available
-        const res = await fetch("/api/cache-quiz", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ 
-            messages: messageContent,
-            cacheIndex: selectedCacheIndex 
-          }),
-        });
-        if (res.status !== 200) {
-          throw new Error("Failed to fetch data");
-        }
-
-        const data = await res.json();
-        const cleanedResult = cleanUpResult(data);
+    const handleGetAllFromCache = async () => {
+      clearError();
+      const result = await getAllFromCache();
+      
+      if (result.data) {
+        const cleanedResult = cleanUpResult(result.data);
         onSuccess(cleanedResult);
-
-        // Update cached questions list with the new message
-        updateCachedQuestions(messageContent);
-      } catch (error) {
-        console.error("Error getting cached data:", error);
-        if (error instanceof Error) {
-          setErrorMessage(error.message);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const cleanUpResult = (data: APIResponse) => {
-      try {
-        // Handle object with content property
-        if (typeof data !== "string") {
-          if (!data.content) {
-            return data.content;
-          }
-          if (typeof data.content === "string") {
-            if (data.content.includes("```json")) {
-              const jsonContent = data.content
-                .split("```json")[1]
-                .split("```")[0];
-              return JSON.parse(jsonContent);
-            } else {
-              return JSON.parse(data.content);
-            }
-          }
-          return null;
-        }
-
-        // Handle string data
-        if (!data.includes("```json")) {
-          return JSON.parse(data);
-        }
-        const jsonContent = data.split("```json")[1].split("```")[0];
-        return JSON.parse(jsonContent);
-      } catch (error) {
-        console.error("Invalid JSON format. Please check your input.", error);
-        return null;
       }
     };
 
     const sendMessage = async (customPrompt?: string) => {
       try {
-        setLoading(true);
+        setIsLoadingMain(true);
         const messageContent = customPrompt || questionValue;
         if (!customPrompt) reset({ question: "" });
 
@@ -267,10 +182,13 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
       } catch (error) {
         console.error("Error sending message:", error);
         if (error instanceof Error) {
-          setErrorMessage(error.message);
+          setFormError("question", {
+            type: "server",
+            message: error.message,
+          });
         }
       } finally {
-        setLoading(false);
+        setIsLoadingMain(false);
       }
     };
 
@@ -293,13 +211,6 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
         )}
         {/* Controls */}
         <div className="flex space-x-2 mb-2">
-          <button
-            onClick={() => setShowMessages(!showMessages)}
-            className="px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
-          >
-            {showMessages ? "Hide Messages" : "Show Messages"}
-          </button>
-
           <button
             onClick={() => setShowCachedQuestions(!showCachedQuestions)}
             className="px-2 py-1 bg-blue-100 hover:bg-blue-200 rounded text-sm"
@@ -331,54 +242,58 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
         )}
 
         {/* Form with react-hook-form */}
-        <form onSubmit={handleSubmit(data => sendMessage(data.question))} className="space-y-2">
+        <form
+          onSubmit={handleSubmit((data) => sendMessage(data.question))}
+          className="space-y-2"
+        >
           <div className="flex flex-col gap-2">
             <input
               className="border p-2 w-full"
               placeholder="Ask something..."
-              disabled={loading}
+              disabled={isLoading}
               {...register("question", { required: "Please enter a question" })}
             />
             {countCacheQuestions > 0 && (
-              <select
-                className="border p-2 bg-white"
-                value={selectedCacheIndex}
-                onChange={(e) => setSelectedCacheIndex(Number(e.target.value))}
-                disabled={loading || countCacheQuestions === 0}
-                title="Select which cache entry to use"
-              >
-                {Array.from({ length: countCacheQuestions }, (_, i) => (
-                  <option key={i} value={i}>
-                    {i + 1}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-col w-full my-2">
+                <label className="text-sm">Max index: {countCacheQuestions}</label>
+                <select
+                  className="border p-2 bg-white"
+                  value={selectedCacheIndex}
+                  onChange={(e) =>
+                    setSelectedCacheIndex(Number(e.target.value))
+                  }
+                  disabled={isLoading || countCacheQuestions === 0}
+                  title="Select which cache entry to use"
+                >
+                  {Array.from({ length: countCacheQuestions }, (_, i) => (
+                    <option key={i} value={i}>
+                      {i + 1}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
-          {errors.question && <div className="text-red-500 text-sm mb-2">{errors.question?.message}</div>}
+          {errors.question && (
+            <div className="text-red-500 text-sm mb-2">
+              {errors.question?.message}
+            </div>
+          )}
           <div className="flex space-x-2">
             <button
               type="submit"
               className="px-4 py-2 bg-blue-500 text-white"
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? "Sending..." : "Send"}
+              {isLoading ? "Sending..." : "Send"}
             </button>
             <button
               type="button"
-              onClick={() => getFromCache()}
+              onClick={() => handleGetAllFromCache()}
               className="px-4 py-2 bg-blue-500 text-white"
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? "Sending..." : "Get from cache"}
-            </button>
-            <button
-              type="button"
-              onClick={() => getAllFromCache()}
-              className="px-4 py-2 bg-blue-500 text-white"
-              disabled={loading}
-            >
-              {loading ? "Sending..." : "Get from all cache"}
+              {isLoading ? "Sending..." : "Get from all cache"}
             </button>
           </div>
         </form>

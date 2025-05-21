@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   getCachedResult,
-  getAllCachedResults,
   setAllCachedResults,
 } from "@/lib/cache";
 
@@ -47,23 +46,13 @@ export async function POST(req: Request) {
   }
 }
 
-function isNotEmptyObject(obj) {
-  if (!obj) return false;
-  return Object.keys(obj).length > 0;
-}
-
 export async function GET() {
   try {
-    const cachedResults = getAllCachedResults();
-    if (!isNotEmptyObject(cachedResults)) {
-      // fetch api
-      const response = await fetch(URL_CACHE);
-      const data = await response.json();
-      const result = data?.result ? { ...data?.result } : { ...data };
-      setAllCachedResults(result);
-      return Response.json(result);
-    }
-    return Response.json(cachedResults);
+    const response = await fetch(URL_CACHE);
+    const data = await response.json();
+    const result = data?.result ? { ...data?.result } : { ...data };
+    setAllCachedResults(result);
+    return Response.json(result);
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
