@@ -11,8 +11,7 @@ const URL_CACHE =
 // GET handler to retrieve all cached results or specific results by key
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
-
+    const { messages, cacheIndex } = await req.json();
     // If a key is provided, return the specific cached result
     if (messages) {
       const cachedResults = getCachedResult(messages);
@@ -27,7 +26,7 @@ export async function POST(req: Request) {
       }
 
       const cachedResultLength = cachedResults.length;
-      const randomIndex = Math.floor(Math.random() * cachedResultLength);
+      const randomIndex = cacheIndex || Math.floor(Math.random() * cachedResultLength);
       const randomCached = cachedResults[randomIndex];
 
       return Response.json({ ...randomCached });

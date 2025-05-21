@@ -38,6 +38,8 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
     const [cacheInput, setCacheInput] = useState("");
     const [cachedQuestions, setCachedQuestions] = useState<string[]>([]);
     const [showCachedQuestions, setShowCachedQuestions] = useState(false);
+    const [selectedCacheIndex, setSelectedCacheIndex] = useState<number>(0);
+    const [countCacheQuestions, setCountCacheQuestions] = useState<number>(0);
     // Setup react-hook-form
     const {
       register,
@@ -71,6 +73,25 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
       }
     }, []);
 
+    const updateCountCacheQuestions = async (customQuestion?: string) => {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/cache-quiz/count", {
+          method: "POST",
+          body: JSON.stringify({ messages: customQuestion || questionValue }),
+        });
+        if (res.status !== 200) {
+          throw new Error("Failed to fetch data");
+        }
+        const data = await res.json();
+        setCountCacheQuestions(data);
+      } catch (error) {
+        console.error("Error updating count cache questions:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     // Function to select a cached question
     const selectCachedQuestion = (question: string) => {
       setCacheInput(question);
@@ -79,6 +100,7 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
 
       // Move the selected question to the top of the list (most recently used)
       updateCachedQuestions(question);
+      updateCountCacheQuestions(question);
     };
 
     // Update the cached questions list with MRU sorting
@@ -148,20 +170,27 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
 
     const getFromCache = async (customPrompt?: string) => {
       setErrorMessage("")
-      if (!questionValue) {
-        setError("question", {
-          type: "required",
-          message: "Please enter a question",
-        });
-        return;
-      }
       try {
         setLoading(true);
         const messageContent = customPrompt || questionValue;
+        if (!messageContent.trim()) {
+          setError("question", {
+            type: "required",
+            message: "Please enter a question",
+          });
+          return;
+        }
 
+        // Use the selected cache index if available
         const res = await fetch("/api/cache-quiz", {
           method: "POST",
-          body: JSON.stringify({ messages: messageContent }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            messages: messageContent,
+            cacheIndex: selectedCacheIndex 
+          }),
         });
         if (res.status !== 200) {
           throw new Error("Failed to fetch data");
@@ -256,7 +285,7 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
     }));
 
     return (
-      <div className="p-4">
+      <div className="pt-4">
         {errorMessage && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
             <strong className="font-bold">Error:</strong> {errorMessage}
@@ -303,12 +332,29 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
 
         {/* Form with react-hook-form */}
         <form onSubmit={handleSubmit(data => sendMessage(data.question))} className="space-y-2">
-          <input
-            className="border p-2 w-full"
-            placeholder="Ask something..."
-            disabled={loading}
-            {...register("question", { required: "Please enter a question" })}
-          />
+          <div className="flex flex-col gap-2">
+            <input
+              className="border p-2 w-full"
+              placeholder="Ask something..."
+              disabled={loading}
+              {...register("question", { required: "Please enter a question" })}
+            />
+            {countCacheQuestions > 0 && (
+              <select
+                className="border p-2 bg-white"
+                value={selectedCacheIndex}
+                onChange={(e) => setSelectedCacheIndex(Number(e.target.value))}
+                disabled={loading || countCacheQuestions === 0}
+                title="Select which cache entry to use"
+              >
+                {Array.from({ length: countCacheQuestions }, (_, i) => (
+                  <option key={i} value={i}>
+                    {i + 1}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
           {errors.question && <div className="text-red-500 text-sm mb-2">{errors.question?.message}</div>}
           <div className="flex space-x-2">
             <button
