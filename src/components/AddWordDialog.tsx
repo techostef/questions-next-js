@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
+import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 import styles from './AddWordDialog.module.css';
+import ModelSelector from './ModelSelector';
 
 interface AddWordDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (words: string[]) => Promise<void>;
   isLoading?: boolean;
+  setSelectedModel: (model: string) => void;
 }
 
-export default function AddWordDialog({ isOpen, onClose, onSubmit, isLoading: externalLoading }: AddWordDialogProps) {
+export default function AddWordDialog({ isOpen, onClose, onSubmit, isLoading: externalLoading, setSelectedModel }: AddWordDialogProps) {
   const [inputText, setInputText] = useState('');
   const [internalLoading, setInternalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +74,15 @@ export default function AddWordDialog({ isOpen, onClose, onSubmit, isLoading: ex
           >
             ×
           </button>
+        </div>
+        <div className="bg-white rounded-lg m-4 p-4 shadow-sm">
+          <ModelSelector
+            type="chat"
+            defaultModel={DEFAULT_CHAT_MODEL}
+            onChange={setSelectedModel}
+            showFullList={false}
+            pageName="bank-english"
+          />
         </div>
         
         <form onSubmit={handleSubmit}>

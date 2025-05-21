@@ -9,7 +9,6 @@ import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { Sound } from "@/assets/sound";
 import { EnglishWord, useVocabulary, VOCABULARY_QUERY_KEY } from "@/hooks/useVocabulary";
 import { useQueryClient } from "@tanstack/react-query";
-import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 
 // Now using the EnglishWord interface from useVocabulary hook
@@ -197,17 +196,6 @@ export default function BankEnglishPage() {
           >
             Add Words
           </button>
-        </div>
-        
-        {/* Model Selection */}
-        <div className="mb-4 bg-white rounded-lg p-4 shadow-sm">
-          <ModelSelector
-            type="chat"
-            defaultModel={DEFAULT_CHAT_MODEL}
-            onChange={setSelectedModel}
-            showFullList={false}
-            pageName="bank-english"
-          />
         </div>
         
         {/* Search bar */}
@@ -538,6 +526,7 @@ export default function BankEnglishPage() {
           onClose={() => setIsAddDialogOpen(false)}
           onSubmit={handleAddWords}
           isLoading={isAddingWords}
+          setSelectedModel={setSelectedModel}
         />
       </div>
     </ProtectedRoute>
