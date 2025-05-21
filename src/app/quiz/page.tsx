@@ -1,19 +1,15 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Quiz from "@/components/Quiz";
-import AskQuestion, { AskQuestionMethods } from "@/components/AskQuestion";
+import AskQuestion from "@/components/AskQuestion";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
-import type { QuizData } from "@/components/type";
 
 export default function QuizPage() {
-  const [quizData, setQuizData] = useState<QuizData | null>(null);
   const { isAuthenticated, user, logout } = useAuth();
   const router = useRouter();
-  const askQuestionRef = useRef<AskQuestionMethods>(null);
 
   // If not authenticated, redirect to login page
   useEffect(() => {
@@ -21,10 +17,6 @@ export default function QuizPage() {
       router.push("/");
     }
   }, [isAuthenticated, router]);
-
-  const handleQuizSubmit = (data: QuizData) => {
-    setQuizData(data);
-  };
 
   // Show nothing while checking authentication
   if (!isAuthenticated) {
@@ -48,10 +40,7 @@ export default function QuizPage() {
           </div>
         </div>
 
-        {/* Navigation Menu */}
-
-        <AskQuestion onSuccess={handleQuizSubmit} ref={askQuestionRef} />
-        {quizData && <Quiz quizData={quizData} />}
+        <AskQuestion />
       </div>
     </ProtectedRoute>
   );

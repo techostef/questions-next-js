@@ -1,11 +1,15 @@
 "use client";
 
 import { cleanUpResult } from "@/lib/string";
-import { forwardRef, useEffect, useImperativeHandle, useState, useCallback } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 import { useForm } from "react-hook-form";
 import { useQuizCache } from "@/hooks/useQuizCache";
 import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
+import Quiz from "./Quiz";
 
 interface Questions {
   questions: {
@@ -21,10 +25,6 @@ interface Questions {
   }[];
 }
 
-interface AskQuestionProps {
-  onSuccess: (data: Questions) => void;
-}
-
 export interface AskQuestionMethods {
   sendMessage: (customPrompt?: string) => Promise<void>;
   loadDifferentQuiz: () => Promise<void>;
@@ -33,175 +33,139 @@ export interface AskQuestionMethods {
 const CACHE_KEY = "english_quiz_cached_questions";
 const MAX_CACHED_QUESTIONS = 10; // Maximum number of questions to store
 
-const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
-  ({ onSuccess }, ref) => {
-    const [isLoadingMain, setIsLoadingMain] = useState(false);
-    const [cacheInput, setCacheInput] = useState("");
-    const [cachedQuestions, setCachedQuestions] = useState<string[]>([]);
-    const [showCachedQuestions, setShowCachedQuestions] = useState(false);
-    const [selectedCacheIndex, setSelectedCacheIndex] = useState<number>(0);
-    const [countCacheQuestions, setCountCacheQuestions] = useState<number>(0);
-    const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_CHAT_MODEL);
-    
-    // Initialize the quiz cache hook
-    const {
-      data,
-      getAllFromCache,
-      isLoading: isLoadingAllCache,
-      errorMessage,
-      clearError
-    } = useQuizCache();
-    
-    // Setup react-hook-form
-    const {
-      register,
-      handleSubmit,
-      setValue,
-      setError: setFormError,
-      watch,
-      formState: { errors },
-      reset,
-    } = useForm<{ question: string }>({ defaultValues: { question: "" } });
-    const questionValue = watch("question");
+const AskQuestion = () => {
+  const [isLoadingMain, setIsLoadingMain] = useState(false);
+  const [cachedQuestions, setCachedQuestions] = useState<string[]>([]);
+  const [showCachedQuestions, setShowCachedQuestions] = useState(false);
+  const [selectedCacheIndex, setSelectedCacheIndex] = useState<number>(0);
+  const [countCacheQuestions, setCountCacheQuestions] = useState<number>(0);
+  const [selectedModel, setSelectedModel] =
+    useState<string>(DEFAULT_CHAT_MODEL);
+  const [quizData, setQuizData] = useState<Questions | null>(null);
 
-    const isLoading = isLoadingMain || isLoadingAllCache;
+  // Initialize the quiz cache hook
+  const {
+    data,
+    getAllFromCache,
+    isLoading: isLoadingAllCache,
+    errorMessage,
+    clearError,
+  } = useQuizCache();
 
-    // Load cached questions from localStorage on component mount
-    useEffect(() => {
-      try {
-        const cachedQuestionsJson = localStorage.getItem(CACHE_KEY);
-        if (cachedQuestionsJson) {
-          const questions: string[] = JSON.parse(cachedQuestionsJson);
-          setCachedQuestions(questions);
+  // Setup react-hook-form
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    setError: setFormError,
+    watch,
+    formState: { errors },
+    reset,
+  } = useForm<{ question: string }>({ defaultValues: { question: "" } });
+  const questionValue = watch("question");
 
-          // Set the most recently used question as the current cache input
-          if (questions.length > 0) {
-            setCacheInput(questions[0]);
-          }
-        }
-      } catch (error) {
-        console.error("Error loading cached questions:", error);
+  const isLoading = isLoadingMain || isLoadingAllCache;
+
+  // Load cached questions from localStorage on component mount
+  useEffect(() => {
+    try {
+      const cachedQuestionsJson = localStorage.getItem(CACHE_KEY);
+      if (cachedQuestionsJson) {
+        const questions: string[] = JSON.parse(cachedQuestionsJson);
+        setCachedQuestions(questions);
       }
-    }, []);
+    } catch (error) {
+      console.error("Error loading cached questions:", error);
+    }
+  }, []);
 
-    useEffect(() => {
-      if (data && questionValue) {
-        const cleanedResult = cleanUpResult(data[questionValue][selectedCacheIndex]);
-        onSuccess(cleanedResult);
-      }
-    }, [data, questionValue, selectedCacheIndex, onSuccess]);
-
-    const updateCountCacheQuestions = async (customQuestion?: string) => {
-      setCountCacheQuestions(data[customQuestion || questionValue].length);
-      setSelectedCacheIndex(0);
-    };
-
-    // Function to select a cached question
-    const selectCachedQuestion = (question: string) => {
-      setCacheInput(question);
-      setValue("question", question);
-      setShowCachedQuestions(false);
-
-      // Move the selected question to the top of the list (most recently used)
-      updateCachedQuestions(question);
-      updateCountCacheQuestions(question);
-    };
-
-    // Update the cached questions list with MRU sorting
-    const updateCachedQuestions = (newQuestion: string) => {
-      // Create a new array without the selected question (if it exists)
-      const filteredQuestions = cachedQuestions.filter(
-        (q) => q !== newQuestion
+  useEffect(() => {
+    if (data && questionValue && data[questionValue]) {
+      const cleanedResult = cleanUpResult(
+        data[questionValue][selectedCacheIndex]
       );
+      setQuizData(cleanedResult);
+    }
+  }, [data, questionValue, selectedCacheIndex]);
 
-      // Add the question to the beginning (most recently used)
-      const updatedQuestions = [newQuestion, ...filteredQuestions].slice(
-        0,
-        MAX_CACHED_QUESTIONS
-      );
+  const updateCountCacheQuestions = async (customQuestion?: string) => {
+    setCountCacheQuestions(data?.[customQuestion || questionValue]?.length || 0);
+    setSelectedCacheIndex(0);
+  };
 
-      // Update state and localStorage
-      setCachedQuestions(updatedQuestions);
-      try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(updatedQuestions));
-      } catch (error) {
-        console.error("Error saving cached questions:", error);
+  // Function to select a cached question
+  const selectCachedQuestion = (question: string) => {
+    setValue("question", question);
+    setShowCachedQuestions(false);
+
+    // Move the selected question to the top of the list (most recently used)
+    updateCachedQuestions(question);
+    updateCountCacheQuestions(question);
+  };
+
+  // Update the cached questions list with MRU sorting
+  const updateCachedQuestions = (newQuestion: string) => {
+    // Create a new array without the selected question (if it exists)
+    const filteredQuestions = cachedQuestions.filter((q) => q !== newQuestion);
+
+    // Add the question to the beginning (most recently used)
+    const updatedQuestions = [newQuestion, ...filteredQuestions].slice(
+      0,
+      MAX_CACHED_QUESTIONS
+    );
+
+    // Update state and localStorage
+    setCachedQuestions(updatedQuestions);
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(updatedQuestions));
+    } catch (error) {
+      console.error("Error saving cached questions:", error);
+    }
+  };
+
+  const handleGetAllFromCache = async () => {
+    clearError();
+    await getAllFromCache();
+  };
+
+  const sendMessage = async (customPrompt?: string) => {
+    try {
+      setIsLoadingMain(true);
+      const messageContent = customPrompt || questionValue;
+      if (!customPrompt) reset({ question: "" });
+
+      const res = await fetch("/api/quiz", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-chat-model": selectedModel,
+        },
+        body: JSON.stringify({
+          messages: messageContent,
+          model: selectedModel,
+        }),
+      });
+      if (res.status !== 200) {
+        throw new Error("Failed to fetch data");
       }
-    };
 
-    const getCategories = useCallback(async () => {
-      try {
-        await getAllFromCache();
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    }, [getAllFromCache]);
-
-    useEffect(() => {
-      getCategories();
-    }, [getCategories]);
-
-    const handleGetAllFromCache = async () => {
-      clearError();
-      const result = await getAllFromCache();
-      
-      if (result.data) {
-        const cleanedResult = cleanUpResult(result.data);
-        onSuccess(cleanedResult);
-      }
-    };
-
-    const sendMessage = async (customPrompt?: string) => {
-      try {
-        setIsLoadingMain(true);
-        const messageContent = customPrompt || questionValue;
-        if (!customPrompt) reset({ question: "" });
-
-        const res = await fetch("/api/quiz", {
-          method: "POST",
-          headers: {
-            'Content-Type': 'application/json',
-            'x-chat-model': selectedModel
-          },
-          body: JSON.stringify({ 
-            messages: messageContent,
-            model: selectedModel 
-          }),
+      // Update cached questions list with the new message
+      updateCachedQuestions(messageContent);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      if (error instanceof Error) {
+        setFormError("question", {
+          type: "server",
+          message: error.message,
         });
-        if (res.status !== 200) {
-          throw new Error("Failed to fetch data");
-        }
-
-        const data = await res.json();
-        const cleanedResult = cleanUpResult(data);
-        onSuccess(cleanedResult);
-
-        // Update cached questions list with the new message
-        updateCachedQuestions(messageContent);
-      } catch (error) {
-        console.error("Error sending message:", error);
-        if (error instanceof Error) {
-          setFormError("question", {
-            type: "server",
-            message: error.message,
-          });
-        }
-      } finally {
-        setIsLoadingMain(false);
       }
-    };
+    } finally {
+      setIsLoadingMain(false);
+    }
+  };
 
-    const loadDifferentQuiz = async () => {
-      await sendMessage(cacheInput);
-    };
-
-    // Expose the sendMessage method to parent components
-    useImperativeHandle(ref, () => ({
-      sendMessage,
-      loadDifferentQuiz,
-    }));
-
-    return (
+  return (
+    <>
       <div className="pt-4">
         {errorMessage && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
@@ -265,7 +229,9 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
             />
             {countCacheQuestions > 0 && (
               <div className="flex flex-col w-full my-2">
-                <label className="text-sm">Max index: {countCacheQuestions}</label>
+                <label className="text-sm">
+                  Max index: {countCacheQuestions}
+                </label>
                 <select
                   className="border p-2 bg-white"
                   value={selectedCacheIndex}
@@ -308,9 +274,10 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
           </div>
         </form>
       </div>
-    );
-  }
-);
+      {quizData && <Quiz quizData={quizData} />}
+    </>
+  );
+};
 
 // Add display name for the component
 AskQuestion.displayName = "AskQuestion";
