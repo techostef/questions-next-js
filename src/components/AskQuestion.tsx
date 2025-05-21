@@ -128,7 +128,7 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
       setErrorMessage("")
       try {
         setLoading(true);
-        const res = await fetch("/api/cache-chat", {
+        const res = await fetch("/api/cache-quiz", {
           method: "GET",
         });
         if (res.status !== 200) {
@@ -159,7 +159,7 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
         setLoading(true);
         const messageContent = customPrompt || questionValue;
 
-        const res = await fetch("/api/cache-chat", {
+        const res = await fetch("/api/cache-quiz", {
           method: "POST",
           body: JSON.stringify({ messages: messageContent }),
         });
@@ -221,7 +221,7 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
         const messageContent = customPrompt || questionValue;
         if (!customPrompt) reset({ question: "" });
 
-        const res = await fetch("/api/chat", {
+        const res = await fetch("/api/quiz", {
           method: "POST",
           body: JSON.stringify({ messages: messageContent }),
         });

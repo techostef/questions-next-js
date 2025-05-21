@@ -16,6 +16,14 @@ export default function Navigation() {
         </li>
         <li className="mr-6">
           <button
+            onClick={() => router.push("/chat")}
+            className="text-blue-600 hover:text-blue-800 font-medium"
+          >
+            Chat
+          </button>
+        </li>
+        <li className="mr-6">
+          <button
             onClick={() => router.push("/speak")}
             className="text-blue-600 hover:text-blue-800 font-medium"
           >
