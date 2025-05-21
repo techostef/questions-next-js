@@ -5,12 +5,18 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Default model selection
+const DEFAULT_MODEL = "gpt-4.1-mini";
+
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { messages, model } = await req.json();
+    
+    // Get model from request body, headers, or use default
+    const selectedModel = model || req.headers.get('x-chat-model') || DEFAULT_MODEL;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: selectedModel,
       messages: [
         {
           role: "system",

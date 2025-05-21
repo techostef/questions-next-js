@@ -31,6 +31,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Default model selection
+const DEFAULT_MODEL = "gpt-4.1-mini";
+
 const GIST_ID = 'ad1d8a1f85b5e6f4fa5092b0b5b982d4';
 
 const URL_CACHE =
@@ -38,17 +41,21 @@ const URL_CACHE =
 
 export async function POST(req) {
   try {
-    const { messages } = await req.json();
+    const { messages, model } = await req.json();
+    
+    // Get model from request body, headers, or use default
+    const selectedModel = model || req.headers.get('x-chat-model') || DEFAULT_MODEL;
 
     const cachedResult = getCachedResult(messages);
     const additionalMessage = cachedResult ? ".Please give me another questions." : "";
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: selectedModel,
       messages: [
         ...messagesWithSystem,
         { role: "user" as any, content: messages + additionalMessage },
       ],
+      response_format: { type: 'text' },
     });
 
     // Get data list questions from gists

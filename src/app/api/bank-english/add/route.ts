@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { DEFAULT_CHAT_MODEL } from '@/constants/listModelsOpenAI';
 
 // Gist ID for bank-english
 const GIST_ID = '1556b6ba9012fab30e737c03bade8c7e';
@@ -14,8 +15,14 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
+    // Get model preference from headers or use default
+    const modelFromHeader = request.headers.get('x-chat-model');
+    
     // Parse the request body
     const body = await request.json();
+    
+    // Determine which model to use (in order of preference: body, header, default)
+    const model = body.model || modelFromHeader || DEFAULT_CHAT_MODEL;
     
     if (!body.words || !Array.isArray(body.words) || body.words.length === 0 || body.words.length > 5) {
       return NextResponse.json({
@@ -59,7 +66,7 @@ export async function POST(request: Request) {
 
       // Query OpenAI for word information
       const completion = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
+        model: model,
         messages: [
           {
             role: "system",

@@ -1,9 +1,11 @@
 "use client";
 
 import { cleanUpResult } from "@/lib/string";
-import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { useQuizCache } from "@/hooks/useQuizCache";
+import ModelSelector from "@/components/ModelSelector";
+import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 
 interface Questions {
   questions: {
@@ -39,6 +41,7 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
     const [showCachedQuestions, setShowCachedQuestions] = useState(false);
     const [selectedCacheIndex, setSelectedCacheIndex] = useState<number>(0);
     const [countCacheQuestions, setCountCacheQuestions] = useState<number>(0);
+    const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_CHAT_MODEL);
     
     // Initialize the quiz cache hook
     const {
@@ -86,7 +89,7 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
         const cleanedResult = cleanUpResult(data[questionValue][selectedCacheIndex]);
         onSuccess(cleanedResult);
       }
-    }, [data, questionValue, selectedCacheIndex]);
+    }, [data, questionValue, selectedCacheIndex, onSuccess]);
 
     const updateCountCacheQuestions = async (customQuestion?: string) => {
       setCountCacheQuestions(data[customQuestion || questionValue].length);
@@ -126,28 +129,17 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
       }
     };
 
-    const getCategories = async () => {
+    const getCategories = useCallback(async () => {
       try {
-        const res = await fetch("/api/categories", {
-          method: "GET",
-        });
-        if (res.status !== 200) {
-          throw new Error("Failed to fetch data");
-        }
-        const data = await res.json();
-        const filteredData = data.filter(
-          (item: string) => !cachedQuestions.includes(item)
-        );
-        setCachedQuestions(filteredData);
+        await getAllFromCache();
       } catch (error) {
-        console.error("Error getting categories:", error);
-        return [];
+        console.error('Error fetching categories:', error);
       }
-    };
+    }, [getAllFromCache]);
 
     useEffect(() => {
       getCategories();
-    }, []);
+    }, [getCategories]);
 
     const handleGetAllFromCache = async () => {
       clearError();
@@ -167,7 +159,14 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
 
         const res = await fetch("/api/quiz", {
           method: "POST",
-          body: JSON.stringify({ messages: messageContent }),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-chat-model': selectedModel
+          },
+          body: JSON.stringify({ 
+            messages: messageContent,
+            model: selectedModel 
+          }),
         });
         if (res.status !== 200) {
           throw new Error("Failed to fetch data");
@@ -209,6 +208,17 @@ const AskQuestion = forwardRef<AskQuestionMethods, AskQuestionProps>(
             <strong className="font-bold">Error:</strong> {errorMessage}
           </div>
         )}
+        {/* Model Selection */}
+        <div className="mb-4 bg-white rounded-lg p-4 shadow-sm">
+          <ModelSelector
+            type="chat"
+            defaultModel={DEFAULT_CHAT_MODEL}
+            onChange={setSelectedModel}
+            showFullList={false}
+            pageName="quiz"
+          />
+        </div>
+
         {/* Controls */}
         <div className="flex space-x-2 mb-2">
           <button

@@ -9,6 +9,8 @@ import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { Sound } from "@/assets/sound";
 import { EnglishWord, useVocabulary, VOCABULARY_QUERY_KEY } from "@/hooks/useVocabulary";
 import { useQueryClient } from "@tanstack/react-query";
+import ModelSelector from "@/components/ModelSelector";
+import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 
 // Now using the EnglishWord interface from useVocabulary hook
 
@@ -23,6 +25,7 @@ export default function BankEnglishPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<EnglishWord[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_CHAT_MODEL);
   const { speak } = useSpeechSynthesis();
   
   // Using React Query to fetch vocabulary data
@@ -76,8 +79,12 @@ export default function BankEnglishPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-chat-model': selectedModel,
         },
-        body: JSON.stringify({ words: wordsList }),
+        body: JSON.stringify({ 
+          words: wordsList,
+          model: selectedModel 
+        }),
       });
       
       const result = await response.json();
@@ -190,6 +197,17 @@ export default function BankEnglishPage() {
           >
             Add Words
           </button>
+        </div>
+        
+        {/* Model Selection */}
+        <div className="mb-4 bg-white rounded-lg p-4 shadow-sm">
+          <ModelSelector
+            type="chat"
+            defaultModel={DEFAULT_CHAT_MODEL}
+            onChange={setSelectedModel}
+            showFullList={false}
+            pageName="bank-english"
+          />
         </div>
         
         {/* Search bar */}
@@ -482,7 +500,7 @@ export default function BankEnglishPage() {
               </div>
             </div>
 
-            {/* Pagination controls for mobile (bottom) */}
+            {/* Navigation buttons for mobile view */}
             <div className="mt-6 flex justify-center space-x-4 md:hidden">
               <button
                 onClick={goToPrevious}

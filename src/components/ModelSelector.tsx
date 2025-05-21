@@ -9,6 +9,7 @@ interface ModelSelectorProps {
   onChange: (model: string) => void;
   showFullList?: boolean;
   className?: string;
+  pageName?: string; // Page identifier for caching model preferences by page
 }
 
 export default function ModelSelector({
@@ -17,6 +18,7 @@ export default function ModelSelector({
   onChange,
   showFullList = false,
   className = '',
+  pageName = 'default', // Default to 'default' if no page name provided
 }: ModelSelectorProps) {
   const [selectedModel, setSelectedModel] = useState<string>(defaultModel || '');
   const [showAllModels, setShowAllModels] = useState<boolean>(showFullList);
@@ -28,7 +30,7 @@ export default function ModelSelector({
   
   // Load cached model selection on component mount
   useEffect(() => {
-    const cacheKey = `ai_${type}_model_preference`;
+    const cacheKey = `ai_${pageName}_${type}_model_preference`;
     try {
       const cachedModel = localStorage.getItem(cacheKey);
       if (cachedModel) {
@@ -41,7 +43,7 @@ export default function ModelSelector({
     } catch (error) {
       console.error('Error loading cached model preference:', error);
     }
-  }, [type, defaultModel, onChange]);
+  }, [pageName, type, defaultModel, onChange]);
   
   // Handle selection change
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -49,9 +51,9 @@ export default function ModelSelector({
     setSelectedModel(newModel);
     onChange(newModel);
     
-    // Cache the selection
+    // Cache the selection with page-specific key
     try {
-      localStorage.setItem(`ai_${type}_model_preference`, newModel);
+      localStorage.setItem(`ai_${pageName}_${type}_model_preference`, newModel);
     } catch (error) {
       console.error('Error saving model preference:', error);
     }

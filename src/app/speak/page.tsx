@@ -346,26 +346,28 @@ export default function StreamPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen p-4">
         <Navigation />
-        <div className="max-w-4xl mx-auto p-4">
+        <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6 text-center">
             Voice Streaming with OpenAI
           </h1>
 
           {/* AI Model selectors */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <ModelSelector 
               type="chat" 
               defaultModel={DEFAULT_CHAT_MODEL}
               onChange={setChatModel}
               className="bg-white rounded-lg shadow-sm p-4"
+              pageName="speak"
             />
             <ModelSelector 
               type="audio" 
               defaultModel={DEFAULT_AUDIO_MODEL}
               onChange={setAudioModel}
               className="bg-white rounded-lg shadow-sm p-4"
+              pageName="speak"
             />
           </div>
           

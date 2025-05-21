@@ -18,6 +18,8 @@ import { sendErrorToServer } from "@/lib/error";
 import { Mic } from "@/assets/mic";
 import ReactMarkdown from "react-markdown";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import ModelSelector from "@/components/ModelSelector";
+import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 
 interface Message {
   role: "user" | "assistant";
@@ -46,6 +48,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_CHAT_MODEL);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use the speech synthesis hook
@@ -243,9 +246,11 @@ export default function ChatPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-chat-model": selectedModel,
         },
         body: JSON.stringify({
           messages: input,
+          model: selectedModel,
         }),
       });
 
@@ -358,6 +363,17 @@ export default function ChatPage() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Model Selection */}
+          <div className="border-b border-gray-200 p-4 bg-white rounded-t-lg">
+            <ModelSelector
+              type="chat"
+              defaultModel={DEFAULT_CHAT_MODEL}
+              onChange={setSelectedModel}
+              showFullList={false}
+              pageName="chat"
+            />
+          </div>
+          
           {messages.length > 0 && (
             <div className="border-t border-gray-200 p-2 bg-gray-50">
               <button
