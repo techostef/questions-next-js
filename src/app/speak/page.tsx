@@ -9,6 +9,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { Mic } from "@/assets/mic";
 import { Sound } from "@/assets/sound";
 import ReactMarkdown from "react-markdown";
+import ModelSelector from "@/components/ModelSelector";
+import { DEFAULT_AUDIO_MODEL, DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 
 interface Message {
   role: "user" | "assistant";
@@ -23,6 +25,8 @@ export default function StreamPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chatModel, setChatModel] = useState<string>(DEFAULT_CHAT_MODEL);
+  const [audioModel, setAudioModel] = useState<string>(DEFAULT_AUDIO_MODEL);
 
   // Refs for handling recording and connections
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -133,11 +137,15 @@ export default function StreamPage() {
               headers['x-session-id'] = sessionIdRef.current;
             }
             
-            // Send to our API endpoint
+            // Send to our API endpoint with model selections
             const response = await fetch('/api/audio/transcript', {
               method: 'POST',
               body: formData,
-              headers
+              headers: {
+                ...headers,
+                'x-audio-model': audioModel,
+                'x-chat-model': chatModel
+              }
             });
             
             if (!response.ok) {
@@ -235,7 +243,11 @@ export default function StreamPage() {
       // Call the DELETE endpoint to clear server-side history
       const response = await fetch('/api/audio/transcript', {
         method: 'DELETE',
-        headers
+        headers: {
+          ...headers,
+          'x-audio-model': audioModel,
+          'x-chat-model': chatModel
+        }
       });
       
       if (!response.ok) {
@@ -278,6 +290,18 @@ export default function StreamPage() {
 
   // Load conversation history on initial render
   useEffect(() => {
+    // Generate a persistent session ID if we don't have one
+    if (!sessionIdRef.current) {
+      const storedSessionId = localStorage.getItem('speakSessionId');
+      if (storedSessionId) {
+        sessionIdRef.current = storedSessionId;
+      } else {
+        // Generate a random session ID
+        sessionIdRef.current = Math.random().toString(36).substring(2);
+        localStorage.setItem('speakSessionId', sessionIdRef.current);
+      }
+    }
+    
     const loadConversationHistory = async () => {
       // First try to load from localStorage
       try {
@@ -296,7 +320,11 @@ export default function StreamPage() {
       // If no local history, try to get from API
       try {
         const response = await fetch('/api/audio/transcript', {
-          headers: sessionIdRef.current ? { 'x-session-id': sessionIdRef.current } : {}
+          headers: {
+            ...(sessionIdRef.current ? { 'x-session-id': sessionIdRef.current } : {}),
+            'x-audio-model': audioModel,
+            'x-chat-model': chatModel
+          }
         });
         
         if (response.ok) {
@@ -313,20 +341,8 @@ export default function StreamPage() {
       }
     };
     
-    // Generate a persistent session ID if we don't have one
-    if (!sessionIdRef.current) {
-      const storedSessionId = localStorage.getItem('speakSessionId');
-      if (storedSessionId) {
-        sessionIdRef.current = storedSessionId;
-      } else {
-        // Generate a random session ID
-        sessionIdRef.current = Math.random().toString(36).substring(2);
-        localStorage.setItem('speakSessionId', sessionIdRef.current);
-      }
-    }
-    
     loadConversationHistory();
-  }, []);
+  }, [audioModel, chatModel]);
 
   return (
     <ProtectedRoute>
@@ -337,6 +353,23 @@ export default function StreamPage() {
             Voice Streaming with OpenAI
           </h1>
 
+          {/* AI Model selectors */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+            <ModelSelector 
+              type="chat" 
+              defaultModel={DEFAULT_CHAT_MODEL}
+              onChange={setChatModel}
+              className="bg-white rounded-lg shadow-sm p-4"
+            />
+            <ModelSelector 
+              type="audio" 
+              defaultModel={DEFAULT_AUDIO_MODEL}
+              onChange={setAudioModel}
+              className="bg-white rounded-lg shadow-sm p-4"
+            />
+          </div>
+          
+          {/* VoiceSelector component for voice selection */}
           <VoiceSelector />
 
           {/* Messages display */}

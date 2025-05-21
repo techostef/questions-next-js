@@ -14,10 +14,11 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: "You are a helpful assistant. Provide clear and concise responses."
+          content: "You are a helpful assistant. Provide clear and concise responses. Format your responses in markdown for better readability."
         },
         { role: "user", content: messages }
       ],
+      response_format: { type: 'text' },
     });
 
     return Response.json(completion.choices[0].message);

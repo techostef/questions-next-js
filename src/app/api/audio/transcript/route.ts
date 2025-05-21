@@ -9,6 +9,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Default models
+const DEFAULT_CHAT_MODEL = 'gpt-4.1-mini';
+const DEFAULT_AUDIO_MODEL = 'whisper-1';
+
 // Store active conversations
 const activeConversations = new Map();
 
@@ -82,10 +86,13 @@ export async function POST(req: NextRequest) {
     fs.writeFileSync(tempFilePath, buffer);
     
     try {
+      // Get audio model from headers or use default
+      const audioModel = req.headers.get('x-audio-model') || DEFAULT_AUDIO_MODEL;
+      
       // Transcribe the audio
       const transcription = await openai.audio.transcriptions.create({
         file: fs.createReadStream(tempFilePath),
-        model: 'whisper-1',
+        model: audioModel,
         language: 'en',
       });
       
@@ -100,9 +107,12 @@ export async function POST(req: NextRequest) {
       // Clean up temp file
       try { fs.unlinkSync(tempFilePath); } catch { /* ignore cleanup errors */ }
       
+      // Get chat model from headers or use default
+      const chatModel = req.headers.get('x-chat-model') || DEFAULT_CHAT_MODEL;
+      
       // Generate AI response
       const chatCompletion = await openai.chat.completions.create({
-        model: 'gpt-4.1-mini',
+        model: chatModel,
         messages: conversation.conversationHistory,
         response_format: { type: 'text' },
       });

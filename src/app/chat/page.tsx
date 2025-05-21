@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
@@ -16,6 +16,8 @@ import {
 import { Sound } from "@/assets/sound";
 import { sendErrorToServer } from "@/lib/error";
 import { Mic } from "@/assets/mic";
+import ReactMarkdown from "react-markdown";
+import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 
 interface Message {
   role: "user" | "assistant";
@@ -38,35 +40,16 @@ export default function ChatPage() {
     return [];
   };
 
-  // Load cached voice type from localStorage (if any)
-  const loadCachedVoiceType = (): "male" | "female" | "default" => {
-    if (typeof window === "undefined") return "default";
-
-    try {
-      const cachedVoiceType = localStorage.getItem("ai_voice_preference");
-      if (
-        cachedVoiceType &&
-        ["male", "female", "default"].includes(cachedVoiceType)
-      ) {
-        return cachedVoiceType as "male" | "female" | "default";
-      }
-    } catch (error) {
-      console.error("Error loading cached voice type:", error);
-    }
-    return "default";
-  };
+  // We'll use the useSpeechSynthesis hook instead of this function
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [voiceType, setVoiceType] = useState<"male" | "female" | "default">(
-    loadCachedVoiceType()
-  );
-  const [availableVoices, setAvailableVoices] = useState<
-    SpeechSynthesisVoice[]
-  >([]);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Use the speech synthesis hook
+  const { speak, updateVoiceType } = useSpeechSynthesis();
 
   // Load cached messages on initial render
   useEffect(() => {
@@ -87,84 +70,6 @@ export default function ChatPage() {
     }
   }, [isAuthenticated, router]);
 
-  // Define speakText using useCallback to avoid recreation on each render
-  const speakText = useCallback(
-    (text: string) => {
-      if (typeof window === "undefined") return;
-
-      // Check if speech synthesis is supported
-      if (!("speechSynthesis" in window)) {
-        console.log("Speech synthesis not supported in this browser");
-        return; // Exit early if not supported
-      }
-
-      try {
-        // Cancel any ongoing speech
-        window.speechSynthesis.cancel();
-
-        // Create a new utterance
-        const utterance = new SpeechSynthesisUtterance(text);
-
-        // Select voice based on gender preference
-        if (voiceType !== "default" && availableVoices.length > 0) {
-          // Try to find English voices first
-          let filteredVoices = availableVoices.filter(
-            (voice) =>
-              voice.lang.includes("en") &&
-              ((voiceType === "female" &&
-                (voice.name.includes("Female") ||
-                  voice.name.includes("female") ||
-                  (!voice.name.includes("Male") &&
-                    !voice.name.includes("David") &&
-                    !voice.name.includes("Hazel") &&
-                    !voice.name.includes("George") &&
-                    !voice.name.includes("Mark") &&
-                    !voice.name.includes("male")))) ||
-                (voiceType === "male" &&
-                  (voice.name.includes("Male") || voice.name.includes("male"))))
-          );
-
-          // If no English voices found, try any voice matching the gender
-          if (filteredVoices.length === 0) {
-            filteredVoices = availableVoices.filter(
-              (voice) =>
-                (voiceType === "female" &&
-                  (voice.name.includes("Female") ||
-                    voice.name.includes("female") ||
-                    (!voice.name.includes("Male") &&
-                      !voice.name.includes("male")))) ||
-                (voiceType === "male" &&
-                  (voice.name.includes("Male") || voice.name.includes("male")))
-            );
-          }
-
-          // Set the voice if we found a matching one
-          if (filteredVoices.length > 0) {
-            if (voiceType === "female") {
-              utterance.voice = filteredVoices[2] ?? filteredVoices[0];
-            } else {
-              utterance.voice = filteredVoices[0];
-            }
-          }
-          console.log("filteredVoices", filteredVoices);
-        }
-
-        // Optional: configure voice properties
-        utterance.rate = 1.0; // Speed of speech (0.1 to 10)
-        utterance.pitch =
-          voiceType === "female" ? 0.8 : voiceType === "male" ? 0.8 : 1.0; // Adjust pitch based on gender
-        utterance.volume = 1.0; // Volume (0 to 1)
-
-        // Start speaking
-        window.speechSynthesis.speak(utterance);
-      } catch (error) {
-        sendErrorToServer(error, { componentStack: "speechSynthesis.speak" });
-        console.error("Speech synthesis error:", error);
-      }
-    },
-    [voiceType, availableVoices]
-  );
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -178,20 +83,20 @@ export default function ChatPage() {
     try {
       // Check if we're in Firefox (which doesn't support SpeechRecognition well)
       const isFirefox = navigator.userAgent.indexOf("Firefox") !== -1;
-      
+
       // Firefox detection - show notice in console but don't try to initialize
       if (isFirefox) {
         console.log("Firefox detected. Speech recognition may not work properly.");
         // We'll still attempt to initialize but warn the user
       }
-      
+
       const SpeechRecognition =
         window.SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (!SpeechRecognition) {
         console.error("Speech Recognition API not supported in this browser");
-        sendErrorToServer(new Error("Speech Recognition not supported"), { 
+        sendErrorToServer(new Error("Speech Recognition not supported"), {
           componentStack: "Browser doesn't support SpeechRecognition or webkitSpeechRecognition",
-          browser: navigator.userAgent
+          browser: navigator.userAgent,
         });
         return;
       }
@@ -242,18 +147,18 @@ export default function ChatPage() {
           silenceTimerRef.current = null;
         }
       };
-      
+
       // Handle errors in speech recognition
       recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error("Speech recognition error:", event.error);
         setIsListening(false);
-        
+
         // Send detailed error info to the server
         sendErrorToServer(
           new Error(`Speech recognition error: ${event.error}`),
           { componentStack: `SpeechRecognition.onerror: ${event.error}` }
         );
-        
+
         // Clear any timers
         if (silenceTimerRef.current) {
           clearTimeout(silenceTimerRef.current);
@@ -261,7 +166,6 @@ export default function ChatPage() {
         }
         setIsListening(false);
       };
-
     } catch (error) {
       console.error("Error initializing speech recognition:", error);
     }
@@ -273,50 +177,6 @@ export default function ChatPage() {
     };
   }, []);
 
-  // Load available voices when component mounts
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    // Check if speech synthesis is supported
-    if (!("speechSynthesis" in window)) {
-      console.log("Speech synthesis not supported in this browser");
-      return; // Exit early if not supported
-    }
-
-    try {
-      // Function to load voices
-      const loadVoices = () => {
-        try {
-          const voices = window.speechSynthesis.getVoices();
-          setAvailableVoices(voices || []);
-        } catch (error) {
-          sendErrorToServer(error, { componentStack: "speechSynthesis.getVoices" });
-        }
-      };
-
-      // Load voices initially
-      loadVoices();
-
-      // Some browsers (like Chrome) load voices asynchronously
-      if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-      }
-    } catch (error) {
-      console.error("Speech synthesis error:", error);
-    }
-
-    return () => {
-      // Cleanup: cancel any ongoing speech when component unmounts
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        try {
-          window.speechSynthesis.cancel();
-        } catch (error) {
-          console.error("Error canceling speech synthesis:", error);
-        }
-      }
-    };
-  }, []);
-
   // Auto-scroll to bottom of messages and speak new assistant messages
   useEffect(() => {
     scrollToBottom();
@@ -324,10 +184,7 @@ export default function ChatPage() {
     // Cache conversation history in localStorage
     if (typeof window !== "undefined" && messages.length > 0) {
       try {
-        localStorage.setItem(
-          "ai_conversation_history",
-          JSON.stringify(messages)
-        );
+        localStorage.setItem("ai_conversation_history", JSON.stringify(messages));
       } catch (error) {
         console.error("Error caching conversation history:", error);
       }
@@ -338,7 +195,7 @@ export default function ChatPage() {
     if (!recognitionRef.current) {
       console.error("Speech recognition not initialized");
       sendErrorToServer(new Error("Speech recognition not initialized"), {
-        componentStack: "toggleListening failed because recognitionRef is null"
+        componentStack: "toggleListening failed because recognitionRef is null",
       });
       return;
     }
@@ -436,8 +293,8 @@ export default function ChatPage() {
         </div>
 
         {/* Voice selection controls */}
-        <VoiceSelector 
-          onChange={(type) => setVoiceType(type)}
+        <VoiceSelector
+          onChange={(newType) => updateVoiceType(newType)}
         />
 
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -461,18 +318,21 @@ export default function ChatPage() {
                         : "bg-gray-200 text-gray-800"
                     }`}
                   >
-                    {message.content}
-                    {message.role === "assistant" && (
-                      <>
-                        <br />
+                    {message.role === "assistant" ? (
+                      <div className="prose prose-sm max-w-none dark:prose-invert">
+                        <ReactMarkdown>
+                          {message.content}
+                        </ReactMarkdown>
                         <button
-                          onClick={() => speakText(message.content)}
+                          onClick={() => speak(message.content)}
                           className="mt-2 text-gray-500 hover:text-gray-700 inline-flex items-center"
                           title="Listen to this response"
                         >
                           <Sound />
                         </button>
-                      </>
+                      </div>
+                    ) : (
+                      message.content
                     )}
                   </div>
                 </div>
