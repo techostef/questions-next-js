@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 type VoiceType = 'default' | 'male' | 'female';
 
@@ -80,6 +80,44 @@ export function useSpeechSynthesis() {
     }
   }, []);
 
+  // Maximum length for each speech chunk (around 200 characters works well)
+  const MAX_CHUNK_LENGTH = 200;
+
+  // Function to split text into speakable chunks
+  const splitTextIntoChunks = (text: string): string[] => {
+    // First, try to split on sentences
+    const rawChunks = text.match(/[^.!?]+[.!?]+/g) || [text];
+    const result: string[] = [];
+    
+    // Now ensure no chunk is too long by further splitting if needed
+    rawChunks.forEach(chunk => {
+      if (chunk.length <= MAX_CHUNK_LENGTH) {
+        result.push(chunk);
+      } else {
+        // If a sentence is too long, split by commas
+        const commaChunks = chunk.split(/,\s+/);
+        let currentChunk = '';
+        
+        commaChunks.forEach(commaChunk => {
+          if (currentChunk.length + commaChunk.length < MAX_CHUNK_LENGTH) {
+            currentChunk += (currentChunk ? ', ' : '') + commaChunk;
+          } else {
+            if (currentChunk) result.push(currentChunk);
+            currentChunk = commaChunk;
+          }
+        });
+        
+        if (currentChunk) result.push(currentChunk);
+      }
+    });
+    
+    return result;
+  };
+
+  // Referenced to track if we're currently speaking
+  const isSpeakingRef = useRef(false);
+  const chunksToSpeakRef = useRef<string[]>([]);
+
   // Speech synthesis function
   const speak = useCallback((text: string) => {
     if (typeof window === "undefined") return;
@@ -93,36 +131,65 @@ export function useSpeechSynthesis() {
     try {
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
-
-      // Create a new utterance
-      const utterance = new SpeechSynthesisUtterance(text);
-
-      // Find the appropriate voice based on user preference
-      if (availableVoices.length > 0) {
-        // Default behavior: use the browser's default voice
-        if (voiceType === "default") {
-          // No need to set a voice, browser will use default
-        } 
-        // Try to find a male voice
-        else if (voiceType === "male") {
-          const maleVoice = availableVoices.find(
-            (voice) => voice.name.includes("Male") || voice.name.includes("male")
-          );
-          if (maleVoice) utterance.voice = maleVoice;
-        } 
-        // Try to find a female voice
-        else if (voiceType === "female") {
-          const femaleVoice = availableVoices.find(
-            (voice) => voice.name.includes("Female") || voice.name.includes("female")
-          );
-          if (femaleVoice) utterance.voice = femaleVoice;
-        }
-      }
-
-      // Start speaking
-      window.speechSynthesis.speak(utterance);
+      isSpeakingRef.current = false;
       
-      return utterance; // Return the utterance for potential further customization
+      // Split text into chunks
+      const chunks = splitTextIntoChunks(text);
+      chunksToSpeakRef.current = [...chunks];
+      
+      // Function to speak the next chunk
+      const speakNextChunk = () => {
+        if (chunksToSpeakRef.current.length === 0) {
+          isSpeakingRef.current = false;
+          return;
+        }
+        
+        isSpeakingRef.current = true;
+        const chunk = chunksToSpeakRef.current.shift() || '';
+        
+        // Create a new utterance for this chunk
+        const utterance = new SpeechSynthesisUtterance(chunk);
+        
+        // Set up event for when this chunk is done
+        utterance.onend = () => {
+          setTimeout(speakNextChunk, 100); // Small delay between chunks
+        };
+        
+        utterance.onerror = (event) => {
+          console.error('Speech synthesis error:', event);
+          setTimeout(speakNextChunk, 100); // Try next chunk even if this one fails
+        };
+
+        // Find the appropriate voice based on user preference
+        if (availableVoices.length > 0) {
+          // Default behavior: use the browser's default voice
+          if (voiceType === "default") {
+            // No need to set a voice, browser will use default
+          } 
+          // Try to find a male voice
+          else if (voiceType === "male") {
+            const maleVoice = availableVoices.find(
+              (voice) => voice.name.includes("Male") || voice.name.includes("male")
+            );
+            if (maleVoice) utterance.voice = maleVoice;
+          } 
+          // Try to find a female voice
+          else if (voiceType === "female") {
+            const femaleVoice = availableVoices.find(
+              (voice) => voice.name.includes("Female") || voice.name.includes("female")
+            );
+            if (femaleVoice) utterance.voice = femaleVoice;
+          }
+        }
+
+        // Start speaking this chunk
+        window.speechSynthesis.speak(utterance);
+      };
+      
+      // Start speaking the first chunk
+      speakNextChunk();
+      
+      return; // No need to return utterance since we're handling them internally
     } catch (error) {
       console.error("Speech synthesis error:", error);
       return null;

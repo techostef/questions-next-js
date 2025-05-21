@@ -19,7 +19,7 @@ function getConversation(sessionId: string) {
       conversationHistory: [
         { 
           role: 'system', 
-          content: 'You are a helpful voice assistant. Provide clear, concise responses suitable for speech output.'
+          content: 'You are a helpful voice assistant. Provide clear, concise responses suitable for speech output. Format your responses in markdown.'
         }
       ],
       processing: false,
@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
       const chatCompletion = await openai.chat.completions.create({
         model: 'gpt-4.1-mini',
         messages: conversation.conversationHistory,
+        response_format: { type: 'text' },
       });
       
       const aiResponse = chatCompletion.choices[0].message.content;
@@ -180,7 +181,7 @@ export async function DELETE(req: NextRequest) {
         conversationHistory: [
           { 
             role: 'system', 
-            content: 'You are a helpful voice assistant. Provide clear, concise responses suitable for speech output.'
+            content: 'You are a helpful voice assistant. Provide clear, concise responses suitable for speech output. Format your responses in markdown.'
           }
         ],
         processing: false,

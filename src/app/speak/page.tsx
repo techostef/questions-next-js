@@ -8,6 +8,7 @@ import Navigation from "@/components/Navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { Mic } from "@/assets/mic";
 import { Sound } from "@/assets/sound";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -373,7 +374,17 @@ export default function StreamPage() {
                         </button>
                       )}
                     </div>
-                    <div>{msg.content}</div>
+                    <div>
+                      {msg.role === "assistant" ? (
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                          <ReactMarkdown>
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        msg.content
+                      )}
+                    </div>
                   </div>
                 ))}
                 {/* This empty div is used as a reference point to scroll to */}
@@ -397,7 +408,13 @@ export default function StreamPage() {
               ) && (
                 <div className="mt-4">
                   <div className="font-semibold mb-2">AI is responding:</div>
-                  <div className="text-gray-700">{aiResponse}</div>
+                  <div className="text-gray-700">
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      <ReactMarkdown>
+                        {aiResponse}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
                 </div>
               )}
           </div>
