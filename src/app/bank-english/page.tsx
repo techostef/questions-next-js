@@ -31,6 +31,9 @@ export default function BankEnglishPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false);
   const [isAddingWords, setIsAddingWords] = useState<boolean>(false);
   const [addWordStatus, setAddWordStatus] = useState<{success?: boolean, message?: string}>({});
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<EnglishWord[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
   const { speak } = useSpeechSynthesis();
 
   // Function to speak the current word and its details
@@ -62,6 +65,35 @@ export default function BankEnglishPage() {
   useEffect(() => {
     fetchWords();
   }, []);
+  
+  // Handle word search functionality
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      setIsSearching(false);
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    const lowercaseQuery = query.toLowerCase();
+    const results = words.filter(word => 
+      word.word.toLowerCase().includes(lowercaseQuery) ||
+      word.synonyms?.toLowerCase().includes(lowercaseQuery) ||
+      word.mean?.toLowerCase().includes(lowercaseQuery)
+    );
+    
+    setSearchResults(results);
+    
+    // If there are results, navigate to the first result
+    if (results.length > 0) {
+      const firstResultIndex = words.findIndex(word => word.word === results[0].word);
+      if (firstResultIndex !== -1) {
+        setCurrentIndex(firstResultIndex);
+      }
+    }
+  };
   
   const handleAddWords = async (wordsList: string[]) => {
     try {
@@ -105,26 +137,66 @@ export default function BankEnglishPage() {
     }
   };
 
+  const goToFirst = () => {
+    setCurrentIndex(0);
+  };
+
   // Handle navigation
   const goToPrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+    if (isSearching && searchResults.length > 0) {
+      const currentResultIndex = searchResults.findIndex(w => w.word === words[currentIndex].word);
+      if (currentResultIndex > 0) {
+        // Go to previous search result
+        const prevResultIndex = words.findIndex(w => w.word === searchResults[currentResultIndex - 1].word);
+        setCurrentIndex(prevResultIndex);
+      } else {
+        // Wrap around to the last search result
+        const lastResultIndex = words.findIndex(w => w.word === searchResults[searchResults.length - 1].word);
+        setCurrentIndex(lastResultIndex);
+      }
     } else {
-      setCurrentIndex(words.length - 1);
+      // Regular navigation without search
+      if (currentIndex > 0) {
+        setCurrentIndex(currentIndex - 1);
+      } else {
+        setCurrentIndex(words.length - 1);
+      }
     }
   };
 
   const goToNext = () => {
-    if (currentIndex < words.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+    if (isSearching && searchResults.length > 0) {
+      const currentResultIndex = searchResults.findIndex(w => w.word === words[currentIndex].word);
+      if (currentResultIndex < searchResults.length - 1) {
+        // Go to next search result
+        const nextResultIndex = words.findIndex(w => w.word === searchResults[currentResultIndex + 1].word);
+        setCurrentIndex(nextResultIndex);
+      } else {
+        // Wrap around to the first search result
+        const firstResultIndex = words.findIndex(w => w.word === searchResults[0].word);
+        setCurrentIndex(firstResultIndex);
+      }
     } else {
-      setCurrentIndex(0);
+      // Regular navigation without search
+      if (currentIndex < words.length - 1) {
+        setCurrentIndex(currentIndex + 1);
+      } else {
+        setCurrentIndex(0);
+      }
     }
   };
 
   const goToRandom = () => {
-    const randomIndex = Math.floor(Math.random() * words.length);
-    setCurrentIndex(randomIndex);
+    if (isSearching && searchResults.length > 0) {
+      // Pick a random result from search results
+      const randomResultIndex = Math.floor(Math.random() * searchResults.length);
+      const wordIndex = words.findIndex(w => w.word === searchResults[randomResultIndex].word);
+      setCurrentIndex(wordIndex);
+    } else {
+      // Regular random without search
+      const randomIndex = Math.floor(Math.random() * words.length);
+      setCurrentIndex(randomIndex);
+    }
   };
 
   // Current word to display
@@ -140,14 +212,48 @@ export default function BankEnglishPage() {
           </h1>
           <button
             onClick={() => setIsAddDialogOpen(true)}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center"
-            title="Add new words to your dictionary"
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
             Add Words
           </button>
+        </div>
+        
+        {/* Search bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search for words, meanings, or synonyms..."
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => handleSearch('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          {isSearching && (
+            <div className="mt-2 text-sm text-gray-600">
+              Found {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
+              {searchResults.length > 0 && 
+                <button 
+                  onClick={() => {
+                    setIsSearching(false);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                  }}
+                  className="ml-2 text-blue-500 hover:text-blue-700 underline"
+                >
+                  Clear search
+                </button>
+              }
+            </div>
+          )}
         </div>
         
         {/* Status message */}
@@ -160,7 +266,11 @@ export default function BankEnglishPage() {
         {/* Voice selector component */}
         <VoiceSelector />
 
-        {loading ? (
+        {isSearching && searchResults.length === 0 ? (
+          <div className="text-center p-8 bg-gray-50 rounded-lg">
+            <p className="text-gray-600">No words match your search query.</p>
+          </div>
+        ) : loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
@@ -181,9 +291,17 @@ export default function BankEnglishPage() {
               <div className="p-6">
                 <div className="flex justify-between items-center flex-col md:flex-row mb-6">
                   <span className="text-sm text-gray-500 mb-2">
-                    Word {currentIndex + 1} of {words.length}
+                    {isSearching 
+                      ? `Result ${searchResults.findIndex(w => w.word === currentWord.word) + 1} of ${searchResults.length}` 
+                      : `Word ${currentIndex + 1} of ${words.length}`}
                   </span>
                   <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={goToFirst}
+                      className={`px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors`}
+                    >
+                      First
+                    </button>
                     <button
                       onClick={goToPrevious}
                       className={`px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors`}
