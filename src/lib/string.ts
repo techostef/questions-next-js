@@ -4,8 +4,25 @@ type APIResponse = string | ContentObject;
 
 // Function to split text into speakable chunks
 export const splitTextIntoChunks = (text: string, maxChunkLength: number): string[] => {
-  // First, try to split on sentences
-  const rawChunks = text.match(/[^.!?]+[.!?]+/g) || [text];
+  // Regular expression that preserves technical terms like next.js, react.js
+  // It looks for sentence boundaries but ignores periods in patterns like word.word
+  
+  // First, find technical terms (like next.js, react.js) and convert them for better speech synthesis
+  // We'll replace dots with spaces for better pronunciation (next.js -> next js)
+  const technicalTerms: {original: string, speech: string}[] = [];
+  const protectedText = text.replace(/\b\w+\.\w+\b/g, (match) => {
+    // Create a speech-friendly version with dot replaced by space
+    const speechVersion = match.replace(/\./g, ' ');
+    technicalTerms.push({
+      original: match,
+      speech: speechVersion
+    });
+    return `__TECHTERM${technicalTerms.length - 1}__`;
+  });
+  
+  // Now split on actual sentence boundaries
+  const sentenceRegex = /[^.!?]+[.!?]+/g;
+  const rawChunks = protectedText.match(sentenceRegex) || [protectedText];
   const result: string[] = [];
   
   // Now ensure no chunk is too long by further splitting if needed
@@ -30,7 +47,15 @@ export const splitTextIntoChunks = (text: string, maxChunkLength: number): strin
     }
   });
   
-  return result;
+  // Restore technical terms with speech-friendly versions (dots replaced with spaces)
+  const finalResult = result.map(chunk => {
+    return chunk.replace(/__TECHTERM(\d+)__/g, (_, index) => {
+      // Use the speech-friendly version (with dots replaced by spaces)
+      return technicalTerms[parseInt(index)].speech;
+    });
+  });
+  
+  return finalResult;
 };
 
 export const cleanUpResult = (data: APIResponse) => {

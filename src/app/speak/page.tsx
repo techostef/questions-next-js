@@ -10,7 +10,10 @@ import { Mic } from "@/assets/mic";
 import { Sound } from "@/assets/sound";
 import ReactMarkdown from "react-markdown";
 import ModelSelector from "@/components/ModelSelector";
-import { DEFAULT_AUDIO_MODEL, DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
+import {
+  DEFAULT_AUDIO_MODEL,
+  DEFAULT_CHAT_MODEL,
+} from "@/constants/listModelsOpenAI";
 
 interface Message {
   role: "user" | "assistant";
@@ -122,61 +125,68 @@ export default function StreamPage() {
         // Process the recorded audio after stopping
         if (audioChunksRef.current.length > 0) {
           setIsProcessing(true);
-          
+
           try {
             // Create an audio blob from all chunks
-            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-            
+            const audioBlob = new Blob(audioChunksRef.current, {
+              type: "audio/webm",
+            });
+
             // Create form data for API request
             const formData = new FormData();
-            formData.append('audio', audioBlob, 'recording.webm');
-            
+            formData.append("audio", audioBlob, "recording.webm");
+
             // Add session ID to headers if available
             const headers: HeadersInit = {};
             if (sessionIdRef.current) {
-              headers['x-session-id'] = sessionIdRef.current;
+              headers["x-session-id"] = sessionIdRef.current;
             }
-            
+
             // Send to our API endpoint with model selections
-            const response = await fetch('/api/audio/transcript', {
-              method: 'POST',
+            const response = await fetch("/api/audio/transcript", {
+              method: "POST",
               body: formData,
               headers: {
                 ...headers,
-                'x-audio-model': audioModel,
-                'x-chat-model': chatModel
-              }
+                "x-audio-model": audioModel,
+                "x-chat-model": chatModel,
+              },
             });
-            
+
             if (!response.ok) {
               const errorData = await response.json();
-              throw new Error(errorData.error || 'Failed to process audio');
+              throw new Error(errorData.error || "Failed to process audio");
             }
-            
+
             const data = await response.json();
-            
+
             // Set transcript and AI response
             setTranscript(data.transcript);
             setAiResponse(data.aiResponse);
-            
+
             // Add messages to conversation
-            setMessages(prev => [
+            setMessages((prev) => [
               ...prev,
-              { role: 'user', content: data.transcript },
-              { role: 'assistant', content: data.aiResponse }
+              { role: "user", content: data.transcript },
+              { role: "assistant", content: data.aiResponse },
             ]);
-            
+
             // Save conversation history from server if provided
-            if (data.conversationHistory && Array.isArray(data.conversationHistory)) {
-              localStorage.setItem('streamChatHistory', JSON.stringify(data.conversationHistory));
+            if (
+              data.conversationHistory &&
+              Array.isArray(data.conversationHistory)
+            ) {
+              localStorage.setItem(
+                "streamChatHistory",
+                JSON.stringify(data.conversationHistory)
+              );
             }
-            
+
             // Speak the AI response
             speak(data.aiResponse);
-            
           } catch (err: any) {
-            setError(`Error: ${err.message || 'Something went wrong'}`);
-            console.error('Audio processing error:', err);
+            setError(`Error: ${err.message || "Something went wrong"}`);
+            console.error("Audio processing error:", err);
           } finally {
             setIsProcessing(false);
             audioChunksRef.current = []; // Clear chunks for next recording
@@ -218,49 +228,53 @@ export default function StreamPage() {
     setError(null);
     stop(); // Stop any ongoing speech
   }
-  
+
   // Clear conversation history (both local and server storage)
   async function clearHistory() {
     setIsProcessing(true);
     stop(); // Stop any ongoing speech if playing
-    
+
     try {
       // Clear local storage
-      localStorage.removeItem('streamChatHistory');
-      
+      localStorage.removeItem("streamChatHistory");
+
       // Reset messages in UI
       setMessages([]);
       setTranscript("");
       setAiResponse("");
       setError(null);
-      
+
       // Clear server-side conversation history
       const headers: HeadersInit = {};
       if (sessionIdRef.current) {
-        headers['x-session-id'] = sessionIdRef.current;
+        headers["x-session-id"] = sessionIdRef.current;
       }
-      
+
       // Call the DELETE endpoint to clear server-side history
-      const response = await fetch('/api/audio/transcript', {
-        method: 'DELETE',
+      const response = await fetch("/api/audio/transcript", {
+        method: "DELETE",
         headers: {
           ...headers,
-          'x-audio-model': audioModel,
-          'x-chat-model': chatModel
-        }
+          "x-audio-model": audioModel,
+          "x-chat-model": chatModel,
+        },
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to clear conversation history');
+        throw new Error(
+          errorData.error || "Failed to clear conversation history"
+        );
       }
-      
+
       // Show temporary success message
       setError("Conversation history cleared successfully");
       setTimeout(() => setError(null), 3000);
     } catch (err: any) {
-      setError(`Error clearing history: ${err.message || 'Something went wrong'}`);
-      console.error('History clearing error:', err);
+      setError(
+        `Error clearing history: ${err.message || "Something went wrong"}`
+      );
+      console.error("History clearing error:", err);
     } finally {
       setIsProcessing(false);
     }
@@ -269,7 +283,7 @@ export default function StreamPage() {
   // Load saved conversation history from localStorage on initial mount
   useEffect(() => {
     try {
-      const savedHistory = localStorage.getItem('streamChatHistory');
+      const savedHistory = localStorage.getItem("streamChatHistory");
       if (savedHistory) {
         const parsedHistory = JSON.parse(savedHistory) as Message[];
         if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
@@ -277,14 +291,14 @@ export default function StreamPage() {
         }
       }
     } catch (err) {
-      console.error('Error loading chat history from localStorage:', err);
+      console.error("Error loading chat history from localStorage:", err);
     }
   }, []);
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem('streamChatHistory', JSON.stringify(messages));
+      localStorage.setItem("streamChatHistory", JSON.stringify(messages));
     }
   }, [messages]);
 
@@ -292,20 +306,20 @@ export default function StreamPage() {
   useEffect(() => {
     // Generate a persistent session ID if we don't have one
     if (!sessionIdRef.current) {
-      const storedSessionId = localStorage.getItem('speakSessionId');
+      const storedSessionId = localStorage.getItem("speakSessionId");
       if (storedSessionId) {
         sessionIdRef.current = storedSessionId;
       } else {
         // Generate a random session ID
         sessionIdRef.current = Math.random().toString(36).substring(2);
-        localStorage.setItem('speakSessionId', sessionIdRef.current);
+        localStorage.setItem("speakSessionId", sessionIdRef.current);
       }
     }
-    
+
     const loadConversationHistory = async () => {
       // First try to load from localStorage
       try {
-        const savedHistory = localStorage.getItem('streamChatHistory');
+        const savedHistory = localStorage.getItem("streamChatHistory");
         if (savedHistory) {
           const history = JSON.parse(savedHistory);
           if (Array.isArray(history) && history.length > 0) {
@@ -314,33 +328,41 @@ export default function StreamPage() {
           }
         }
       } catch (err) {
-        console.error('Error loading from localStorage:', err);
+        console.error("Error loading from localStorage:", err);
       }
-      
+
       // If no local history, try to get from API
       try {
-        const response = await fetch('/api/audio/transcript', {
+        const response = await fetch("/api/audio/transcript", {
           headers: {
-            ...(sessionIdRef.current ? { 'x-session-id': sessionIdRef.current } : {}),
-            'x-audio-model': audioModel,
-            'x-chat-model': chatModel
-          }
+            ...(sessionIdRef.current
+              ? { "x-session-id": sessionIdRef.current }
+              : {}),
+            "x-audio-model": audioModel,
+            "x-chat-model": chatModel,
+          },
         });
-        
+
         if (response.ok) {
           const data = await response.json();
-          if (data.conversationHistory && Array.isArray(data.conversationHistory)) {
+          if (
+            data.conversationHistory &&
+            Array.isArray(data.conversationHistory)
+          ) {
             setMessages(data.conversationHistory);
-            
+
             // Also save to localStorage
-            localStorage.setItem('streamChatHistory', JSON.stringify(data.conversationHistory));
+            localStorage.setItem(
+              "streamChatHistory",
+              JSON.stringify(data.conversationHistory)
+            );
           }
         }
       } catch (err) {
-        console.error('Error fetching conversation history:', err);
+        console.error("Error fetching conversation history:", err);
       }
     };
-    
+
     loadConversationHistory();
   }, [audioModel, chatModel]);
 
@@ -355,22 +377,22 @@ export default function StreamPage() {
 
           {/* AI Model selectors */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <ModelSelector 
-              type="chat" 
+            <ModelSelector
+              type="chat"
               defaultModel={DEFAULT_CHAT_MODEL}
               onChange={setChatModel}
               className="bg-white rounded-lg shadow-sm p-4"
               pageName="speak"
             />
-            <ModelSelector 
-              type="audio" 
+            <ModelSelector
+              type="audio"
               defaultModel={DEFAULT_AUDIO_MODEL}
               onChange={setAudioModel}
               className="bg-white rounded-lg shadow-sm p-4"
               pageName="speak"
             />
           </div>
-          
+
           {/* VoiceSelector component for voice selection */}
           <VoiceSelector />
 
@@ -412,9 +434,7 @@ export default function StreamPage() {
                     <div>
                       {msg.role === "assistant" ? (
                         <div className="prose prose-sm max-w-none dark:prose-invert">
-                          <ReactMarkdown>
-                            {msg.content}
-                          </ReactMarkdown>
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
                       ) : (
                         msg.content
@@ -445,9 +465,7 @@ export default function StreamPage() {
                   <div className="font-semibold mb-2">AI is responding:</div>
                   <div className="text-gray-700">
                     <div className="prose prose-sm max-w-none dark:prose-invert">
-                      <ReactMarkdown>
-                        {aiResponse}
-                      </ReactMarkdown>
+                      <ReactMarkdown>{aiResponse}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
@@ -470,11 +488,32 @@ export default function StreamPage() {
                 isRecording
                   ? "bg-red-500 hover:bg-red-600"
                   : "bg-blue-500 hover:bg-blue-600"
-              } text-white transition-colors`}
+              } text-white transition-colors relative z-10`}
               title={isRecording ? "Stop recording" : "Start recording"}
             >
               <Mic isListening={isRecording} />
             </button>
+
+            {/* Full-screen recording overlay - only visible when recording */}
+            {isRecording && (
+              <div
+                onClick={toggleRecording}
+                className="fixed inset-0 z-50 bg-red-500 opacity-100 flex flex-col items-center justify-center md:hidden"
+              >
+                <div className="text-white text-xl mb-8 flex items-center">
+                  <div className="animate-pulse mr-3">
+                    <div className="w-4 h-4 bg-white rounded-full"></div>
+                  </div>
+                  <span className="font-bold">Recording in progress...</span>
+                </div>
+                <button className="bg-white text-red-600 px-8 py-4 rounded-full font-bold text-lg shadow-lg transform transition hover:scale-105 active:scale-95">
+                  STOP RECORDING
+                </button>
+                <p className="text-white mt-4 opacity-80">
+                  Tap the button to stop recording
+                </p>
+              </div>
+            )}
 
             <button
               onClick={resetConversation}
@@ -484,16 +523,25 @@ export default function StreamPage() {
             >
               Reset
             </button>
-            
+
             <button
               onClick={clearHistory}
               disabled={isProcessing || messages.length === 0}
               className="px-6 py-3 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors flex items-center gap-2"
               title="Clear all conversation history from both local storage and server"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+              >
+                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+                <path
+                  fillRule="evenodd"
+                  d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"
+                />
               </svg>
               Clear History
             </button>

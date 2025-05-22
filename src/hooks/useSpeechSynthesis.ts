@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 type VoiceType = 'default' | 'male' | 'female';
 
+const DELAY_BETWEEN_CHUNKS = 50;
+
 /**
  * Custom hook for speech synthesis functionality
  * @returns Speech synthesis functions and state
@@ -129,12 +131,12 @@ export function useSpeechSynthesis() {
         
         // Set up event for when this chunk is done
         utterance.onend = () => {
-          setTimeout(speakNextChunk, 100); // Small delay between chunks
+          setTimeout(speakNextChunk, DELAY_BETWEEN_CHUNKS); // Small delay between chunks
         };
         
         utterance.onerror = (event) => {
           console.error('Speech synthesis error:', event);
-          setTimeout(speakNextChunk, 100); // Try next chunk even if this one fails
+          setTimeout(speakNextChunk, DELAY_BETWEEN_CHUNKS); // Try next chunk even if this one fails
         };
 
         // Find the appropriate voice based on user preference
