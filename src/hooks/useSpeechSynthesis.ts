@@ -1,3 +1,5 @@
+import { cleanMarkdown, isMarkdown } from '@/lib/markdown';
+import { splitTextIntoChunks } from '@/lib/string';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 type VoiceType = 'default' | 'male' | 'female';
@@ -83,37 +85,6 @@ export function useSpeechSynthesis() {
   // Maximum length for each speech chunk (around 200 characters works well)
   const MAX_CHUNK_LENGTH = 200;
 
-  // Function to split text into speakable chunks
-  const splitTextIntoChunks = (text: string): string[] => {
-    // First, try to split on sentences
-    const rawChunks = text.match(/[^.!?]+[.!?]+/g) || [text];
-    const result: string[] = [];
-    
-    // Now ensure no chunk is too long by further splitting if needed
-    rawChunks.forEach(chunk => {
-      if (chunk.length <= MAX_CHUNK_LENGTH) {
-        result.push(chunk);
-      } else {
-        // If a sentence is too long, split by commas
-        const commaChunks = chunk.split(/,\s+/);
-        let currentChunk = '';
-        
-        commaChunks.forEach(commaChunk => {
-          if (currentChunk.length + commaChunk.length < MAX_CHUNK_LENGTH) {
-            currentChunk += (currentChunk ? ', ' : '') + commaChunk;
-          } else {
-            if (currentChunk) result.push(currentChunk);
-            currentChunk = commaChunk;
-          }
-        });
-        
-        if (currentChunk) result.push(currentChunk);
-      }
-    });
-    
-    return result;
-  };
-
   // Referenced to track if we're currently speaking
   const isSpeakingRef = useRef(false);
   const chunksToSpeakRef = useRef<string[]>([]);
@@ -133,8 +104,14 @@ export function useSpeechSynthesis() {
       window.speechSynthesis.cancel();
       isSpeakingRef.current = false;
       
+      // Process text based on whether it's markdown or plain text
+      let processedText = text;
+      if (isMarkdown(text)) {
+        processedText = cleanMarkdown(text);
+      }
+      
       // Split text into chunks
-      const chunks = splitTextIntoChunks(text);
+      const chunks = splitTextIntoChunks(processedText, MAX_CHUNK_LENGTH);
       chunksToSpeakRef.current = [...chunks];
       
       // Function to speak the next chunk

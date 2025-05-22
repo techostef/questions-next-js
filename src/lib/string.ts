@@ -2,6 +2,37 @@
 type ContentObject = { content?: string };
 type APIResponse = string | ContentObject;
 
+// Function to split text into speakable chunks
+export const splitTextIntoChunks = (text: string, maxChunkLength: number): string[] => {
+  // First, try to split on sentences
+  const rawChunks = text.match(/[^.!?]+[.!?]+/g) || [text];
+  const result: string[] = [];
+  
+  // Now ensure no chunk is too long by further splitting if needed
+  rawChunks.forEach(chunk => {
+    if (chunk.length <= maxChunkLength) {
+      result.push(chunk);
+    } else {
+      // If a sentence is too long, split by commas
+      const commaChunks = chunk.split(/,\s+/);
+      let currentChunk = '';
+      
+      commaChunks.forEach(commaChunk => {
+        if (currentChunk.length + commaChunk.length < maxChunkLength) {
+          currentChunk += (currentChunk ? ', ' : '') + commaChunk;
+        } else {
+          if (currentChunk) result.push(currentChunk);
+          currentChunk = commaChunk;
+        }
+      });
+      
+      if (currentChunk) result.push(currentChunk);
+    }
+  });
+  
+  return result;
+};
+
 export const cleanUpResult = (data: APIResponse) => {
   try {
     // Handle object with content property
