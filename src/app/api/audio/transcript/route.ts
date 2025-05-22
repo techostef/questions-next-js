@@ -23,7 +23,7 @@ function getConversation(sessionId: string) {
       conversationHistory: [
         { 
           role: 'system', 
-          content: 'You are a helpful voice assistant. Provide clear, concise responses suitable for speech output. Format your responses in markdown.'
+          content: 'You are a helpful voice assistant. Consider yourself as a english teacher. Correct any grammar mistakes and tell me how to improve. Provide clear, concise responses suitable for speech output. Format your responses in markdown.'
         }
       ],
       processing: false,
@@ -113,16 +113,43 @@ export async function POST(req: NextRequest) {
       // Generate AI response
       const chatCompletion = await openai.chat.completions.create({
         model: chatModel,
-        messages: conversation.conversationHistory,
+        messages: [...conversation.conversationHistory, {
+          role: 'system',
+          content: 'Format your response with simple SSML tags to enhance speech synthesis. Use <break strength="medium"/> for pauses between sentences, <emphasis level="moderate">important words</emphasis> for emphasis, and <prosody rate="slow" pitch="low">text</prosody> sparingly for important points. Do not use complex SSML features. Wrap the entire response in <speak> tags.'
+        }],
         response_format: { type: 'text' },
       });
       
-      const aiResponse = chatCompletion.choices[0].message.content;
+      let aiResponse = chatCompletion.choices[0].message.content;
       
-      // Add AI response to conversation history
+      // Ensure response is wrapped in SSML tags if not already
+      if (!aiResponse.trim().startsWith('<speak>')) {
+        aiResponse = `<speak>${aiResponse}</speak>`;
+      }
+      
+      // Normalize SSML for better compatibility
+      // - Use simple tags that browsers can handle better
+      // - Ensure proper tag closing and spacing
+      const ssmlResponse = aiResponse
+        .replace(/\s+/g, ' ')
+        .replace(/<break\s+([^/>]*)\/>\s*/, '<break $1/> ') // Ensure space after breaks
+        .replace(/<break(\s+[^>]*)>\s*/, '<break$1/> '); // Convert unclosed breaks
+      
+      // Create a plain text version (without SSML tags) for display
+      const displayResponse = aiResponse
+        .replace(/<speak>|<\/speak>/g, '')
+        .replace(/<break[^>]*>/g, ' ')
+        .replace(/<break[^>]*\/>/g, ' ')
+        .replace(/<emphasis[^>]*>([^<]*)<\/emphasis>/g, '$1')
+        .replace(/<prosody[^>]*>([^<]*)<\/prosody>/g, '$1')
+        .replace(/<[^>]*>/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      // Add AI response to conversation history (using display version without SSML tags)
       conversation.conversationHistory.push({
         role: 'assistant',
-        content: aiResponse
+        content: displayResponse
       });
       
       // Limit conversation history to prevent token limits (keep last 10 exchanges)
@@ -138,11 +165,12 @@ export async function POST(req: NextRequest) {
       // Reset processing flag
       conversation.processing = false;
       
-      // Return both transcript and AI response
-      return NextResponse.json({ 
+      // Return the response with both display and SSML versions
+      return NextResponse.json({
         transcript,
-        aiResponse,
-        conversationHistory: conversation.conversationHistory.filter(msg => msg.role !== 'system')
+        aiResponse: displayResponse,
+        ssmlResponse,
+        conversationHistory: conversation.conversationHistory,
       });
       
     } catch (error) {

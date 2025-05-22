@@ -18,6 +18,7 @@ import {
 interface Message {
   role: "user" | "assistant";
   content: string;
+  ssml?: string; // Optional SSML version for better speech synthesis
 }
 
 export default function StreamPage() {
@@ -168,7 +169,11 @@ export default function StreamPage() {
             setMessages((prev) => [
               ...prev,
               { role: "user", content: data.transcript },
-              { role: "assistant", content: data.aiResponse },
+              { 
+                role: "assistant", 
+                content: data.aiResponse,
+                ssml: data.ssmlResponse // Store SSML version for speech
+              },
             ]);
 
             // Save conversation history from server if provided
@@ -182,8 +187,12 @@ export default function StreamPage() {
               );
             }
 
-            // Speak the AI response
-            speak(data.aiResponse);
+            // Speak the AI response using SSML if available
+            if (data.ssmlResponse) {
+              speak(data.ssmlResponse, true); // true indicates SSML content
+            } else {
+              speak(data.aiResponse);
+            }
           } catch (err: any) {
             setError(`Error: ${err.message || "Something went wrong"}`);
             console.error("Audio processing error:", err);
@@ -410,10 +419,10 @@ export default function StreamPage() {
                 {messages.map((msg, index) => (
                   <div
                     key={index}
-                    className={`p-3 rounded-lg ${
+                    className={`p-4 rounded-lg shadow-sm ${
                       msg.role === "user"
-                        ? "bg-blue-100 ml-12"
-                        : "bg-gray-100 mr-12"
+                        ? "bg-blue-100 ml-12 border-l-4 border-blue-300"
+                        : "bg-gray-100 mr-12 border-l-4 border-green-400"
                     }`}
                   >
                     <div className="font-semibold mb-1 flex justify-between items-center">
@@ -422,7 +431,7 @@ export default function StreamPage() {
                       </span>
                       {msg.role === "assistant" && (
                         <button
-                          onClick={() => speak(msg.content)}
+                          onClick={() => msg.ssml ? speak(msg.ssml, true) : speak(msg.content)}
                           className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-gray-200 transition-colors"
                           title="Play audio again"
                           aria-label="Play message audio"
@@ -433,11 +442,50 @@ export default function StreamPage() {
                     </div>
                     <div>
                       {msg.role === "assistant" ? (
-                        <div className="prose prose-sm max-w-none dark:prose-invert">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <div className="prose prose-md max-w-none dark:prose-invert leading-relaxed">
+                          {/* English teacher context - add visual cues */}
+                          {msg.content.includes("correct") || msg.content.includes("grammar") || msg.content.includes("mistake") ? (
+                            <div className="mb-2 text-sm text-green-600 flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>English correction provided</span>
+                            </div>
+                          ) : null}
+                          
+                          <ReactMarkdown
+                            components={{
+                              p: ({children}) => (
+                                <p className="mb-4 text-base leading-7">{children}</p>
+                              ),
+                              ul: ({children}) => (
+                                <ul className="list-disc pl-6 mb-4 space-y-2">{children}</ul>
+                              ),
+                              li: ({children}) => (
+                                <li className="mb-2">{children}</li>
+                              ),
+                              strong: ({children}) => (
+                                <strong className="font-semibold text-blue-700">{children}</strong>
+                              ),
+                              h1: ({children}) => (
+                                <h1 className="text-xl font-bold mb-3 mt-2 text-gray-800">{children}</h1>
+                              ),
+                              h2: ({children}) => (
+                                <h2 className="text-lg font-bold mb-3 mt-2 text-gray-800">{children}</h2>
+                              ),
+                              blockquote: ({children}) => (
+                                <blockquote className="border-l-4 border-blue-300 pl-4 italic my-4 text-gray-600">{children}</blockquote>
+                              ),
+                              code: ({children}) => (
+                                <code className="bg-gray-100 px-1 py-0.5 rounded text-red-500">{children}</code>
+                              )
+                            }}
+                          >
+                            {msg.content}
+                          </ReactMarkdown>
                         </div>
                       ) : (
-                        msg.content
+                        <div className="text-base">{msg.content}</div>
                       )}
                     </div>
                   </div>
@@ -472,6 +520,16 @@ export default function StreamPage() {
               )}
           </div>
 
+          {/* Loading indicator */}
+          {isProcessing && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg flex flex-col items-center">
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-lg font-medium">Processing your audio...</p>
+              </div>
+            </div>
+          )}
+
           {/* Error display */}
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">
@@ -488,7 +546,7 @@ export default function StreamPage() {
                 isRecording
                   ? "bg-red-500 hover:bg-red-600"
                   : "bg-blue-500 hover:bg-blue-600"
-              } text-white transition-colors relative z-10`}
+              } text-white transition-colors relative z-10 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
               title={isRecording ? "Stop recording" : "Start recording"}
             >
               <Mic isListening={isRecording} />
@@ -518,7 +576,7 @@ export default function StreamPage() {
             <button
               onClick={resetConversation}
               disabled={isProcessing}
-              className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors"
+              className={`px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
               title="Reset current conversation"
             >
               Reset
@@ -527,7 +585,7 @@ export default function StreamPage() {
             <button
               onClick={clearHistory}
               disabled={isProcessing || messages.length === 0}
-              className="px-6 py-3 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors flex items-center gap-2"
+              className={`px-6 py-3 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors flex items-center gap-2 ${isProcessing || messages.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
               title="Clear all conversation history from both local storage and server"
             >
               <svg

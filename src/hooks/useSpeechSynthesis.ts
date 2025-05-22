@@ -92,7 +92,7 @@ export function useSpeechSynthesis() {
   const chunksToSpeakRef = useRef<string[]>([]);
 
   // Speech synthesis function
-  const speak = useCallback((text: string) => {
+  const speak = useCallback((text: string, isSSML: boolean = false) => {
     if (typeof window === "undefined") return;
     
     // Check if speech synthesis is supported
@@ -106,10 +106,32 @@ export function useSpeechSynthesis() {
       window.speechSynthesis.cancel();
       isSpeakingRef.current = false;
       
-      // Process text based on whether it's markdown or plain text
+      // Process text based on content type
       let processedText = text;
-      if (isMarkdown(text)) {
-        processedText = cleanMarkdown(text);
+      
+      if (isSSML) {
+        // For SSML content, check if we need to strip the tags
+        // Most browsers don't support SSML directly
+        const isEdge = typeof window !== 'undefined' && navigator.userAgent.indexOf('Edg') !== -1;
+        const ssmlSupported = isEdge; // Only Edge has good SSML support currently
+        
+        if (!ssmlSupported) {
+          // Strip SSML tags for browsers that don't support it
+          processedText = text
+            .replace(/<speak>|<\/speak>/g, '')
+            .replace(/<break[^>]*>/g, ' ') // Replace breaks with spaces instead of periods
+            .replace(/<emphasis[^>]*>([^<]*)<\/emphasis>/g, '$1')
+            .replace(/<prosody[^>]*>([^<]*)<\/prosody>/g, '$1')
+            .replace(/<[^>]*>/g, '');
+          
+          // Clean up multiple spaces that might have been introduced
+          processedText = processedText.replace(/\s+/g, ' ').trim();
+        }
+      } else {
+        // For non-SSML content, clean markdown if present
+        if (isMarkdown(text)) {
+          processedText = cleanMarkdown(text);
+        }
       }
       
       // Split text into chunks
@@ -128,6 +150,20 @@ export function useSpeechSynthesis() {
         
         // Create a new utterance for this chunk
         const utterance = new SpeechSynthesisUtterance(chunk);
+        
+        // Set SSML mode if supported and if the content is SSML
+        // Microsoft Edge is the main browser with good SSML support
+        const isEdge = typeof window !== 'undefined' && navigator.userAgent.indexOf('Edg') !== -1;
+        
+        if (isSSML && isEdge && 'SpeechSynthesisUtterance' in window) {
+          try {
+            // For Edge browser which supports SSML
+            // @ts-expect-error - this is a non-standard property supported in Microsoft Edge
+            utterance.inputType = 'ssml';
+          } catch (error) {
+            console.warn('SSML inputType not supported in this browser', error);
+          }
+        }
         
         // Set up event for when this chunk is done
         utterance.onend = () => {
