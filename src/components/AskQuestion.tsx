@@ -93,7 +93,7 @@ const AskQuestion = () => {
   }, [data, questionValue, selectedCacheIndex, setQuizData, addQuizToCollection]);
 
   useEffect(() => {
-    if (data && questionValue) {
+    if (data && questionValue && data[questionValue]) {
       const newData: Questions[] = [];
       for (const value of data[questionValue]) {
         newData.push(cleanUpResult(value));
