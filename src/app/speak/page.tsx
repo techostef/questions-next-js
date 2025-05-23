@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import VoiceSelector from "@/components/VoiceSelector";
 import Navigation from "@/components/Navigation";
+import TabNavigation from "@/components/TabNavigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { Mic } from "@/assets/mic";
 import { Sound } from "@/assets/sound";
@@ -14,6 +15,7 @@ import {
   DEFAULT_AUDIO_MODEL,
   DEFAULT_CHAT_MODEL,
 } from "@/constants/listModelsOpenAI";
+import { TABS } from "./constants";
 
 interface Message {
   role: "user" | "assistant";
@@ -383,6 +385,9 @@ export default function StreamPage() {
           <h1 className="text-2xl font-bold mb-6 text-center">
             Voice Streaming with OpenAI
           </h1>
+
+          {/* Tab Navigation */}
+          <TabNavigation tabs={TABS} />
 
           {/* AI Model selectors */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
