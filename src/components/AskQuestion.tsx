@@ -1,10 +1,7 @@
 "use client";
 
 import { cleanUpResult } from "@/lib/string";
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQuizCache } from "@/hooks/useQuizCache";
 import ModelSelector from "@/components/ModelSelector";
@@ -32,7 +29,8 @@ const AskQuestion = () => {
   const [selectedModel, setSelectedModel] =
     useState<string>(DEFAULT_CHAT_MODEL);
   // Using global state from Zustand store instead of local state
-  const { quizData, setQuizData, setAllQuizData, addQuizToCollection } = useQuizStore();
+  const { quizData, setQuizData, setAllQuizData, addQuizToCollection } =
+    useQuizStore();
 
   // Initialize the quiz cache hook
   const {
@@ -85,12 +83,21 @@ const AskQuestion = () => {
         data[questionValue][selectedCacheIndex]
       );
       setQuizData(cleanedResult);
-      
+
       // Add to allQuizData collection with unique ID
-      const quizId = `quiz-${questionValue.substring(0, 15)}-${uuidv4().substring(0, 8)}`;
+      const quizId = `quiz-${questionValue.substring(
+        0,
+        15
+      )}-${uuidv4().substring(0, 8)}`;
       addQuizToCollection(quizId, cleanedResult);
     }
-  }, [data, questionValue, selectedCacheIndex, setQuizData, addQuizToCollection]);
+  }, [
+    data,
+    questionValue,
+    selectedCacheIndex,
+    setQuizData,
+    addQuizToCollection,
+  ]);
 
   useEffect(() => {
     if (data && questionValue && data[questionValue]) {
@@ -100,10 +107,12 @@ const AskQuestion = () => {
       }
       setAllQuizData(newData);
     }
-  }, [data, questionValue, setAllQuizData])
+  }, [data, questionValue, setAllQuizData]);
 
   const updateCountCacheQuestions = async (customQuestion?: string) => {
-    setCountCacheQuestions(data?.[customQuestion || questionValue]?.length || 0);
+    setCountCacheQuestions(
+      data?.[customQuestion || questionValue]?.length || 0
+    );
     setSelectedCacheIndex(0);
   };
 
@@ -289,7 +298,6 @@ const AskQuestion = () => {
           </div>
         </form>
       </div>
-      {/* Quiz component now uses global state directly */}
       {quizData && <Quiz />}
     </>
   );
