@@ -21,7 +21,7 @@ export interface AskQuestionMethods {
 }
 
 const CACHE_KEY = "english_quiz_cached_questions";
-const MAX_CACHED_QUESTIONS = 10; // Maximum number of questions to store
+const MAX_CACHED_QUESTIONS = 100; // Maximum number of questions to store
 
 const AskQuestion = () => {
   const [isLoadingMain, setIsLoadingMain] = useState(false);
@@ -57,17 +57,26 @@ const AskQuestion = () => {
 
   const isLoading = isLoadingMain || isLoadingAllCache;
 
-  // Load cached questions from localStorage on component mount
-  useEffect(() => {
+  const loadCategories = async () => {
     try {
-      const cachedQuestionsJson = localStorage.getItem(CACHE_KEY);
-      if (cachedQuestionsJson) {
-        const questions: string[] = JSON.parse(cachedQuestionsJson);
-        setCachedQuestions(questions);
+      const res = await fetch("/api/categories", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (res.status !== 200) {
+        throw new Error("Failed to fetch data");
       }
+      const data = await res.json();
+      setCachedQuestions(data);
     } catch (error) {
       console.error("Error loading cached questions:", error);
     }
+  };
+
+  useEffect(() => {
+    loadCategories();
   }, []);
 
   useEffect(() => {
