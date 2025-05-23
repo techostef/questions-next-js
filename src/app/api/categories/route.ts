@@ -8,6 +8,8 @@ const LIST_CATEGORIES = [
   'i wanna practice auxiliary verb grammar',
   'i wanna practice determiners grammar',
   'i wanna practice gerunds grammar',
+  'i wanna practice infinitive grammar',
+  'i wanna practice gerunds and infinitive grammar',
   'i wanna practice conjunction grammar',
   'i wanna practice verb grammar',
   'i wanna practice vocabulary',
