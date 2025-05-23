@@ -4,6 +4,7 @@ const LIST_CATEGORIES = [
   'i wanna practice phrasal verb grammar',
   'i wanna practice adverb grammar',
   'i wanna practice adjectives grammar',
+  'i wanna practice adjectives and adverbs grammar',
   'i wanna practice articles grammar',
   'i wanna practice auxiliary verb grammar',
   'i wanna practice determiners grammar',

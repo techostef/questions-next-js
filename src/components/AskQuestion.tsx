@@ -10,20 +10,10 @@ import { useQuizCache } from "@/hooks/useQuizCache";
 import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 import Quiz from "./Quiz";
+import { Questions, useQuizStore } from "@/store/quizStore";
+import { v4 as uuidv4 } from "uuid";
 
-interface Questions {
-  questions: {
-    question: string;
-    options: {
-      a: string;
-      b: string;
-      c: string;
-      d: string;
-    };
-    answer: string;
-    reason: string;
-  }[];
-}
+// Questions interface is now imported from the quizStore
 
 export interface AskQuestionMethods {
   sendMessage: (customPrompt?: string) => Promise<void>;
@@ -41,7 +31,8 @@ const AskQuestion = () => {
   const [countCacheQuestions, setCountCacheQuestions] = useState<number>(0);
   const [selectedModel, setSelectedModel] =
     useState<string>(DEFAULT_CHAT_MODEL);
-  const [quizData, setQuizData] = useState<Questions | null>(null);
+  // Using global state from Zustand store instead of local state
+  const { quizData, setQuizData, setAllQuizData, addQuizToCollection } = useQuizStore();
 
   // Initialize the quiz cache hook
   const {
@@ -85,8 +76,22 @@ const AskQuestion = () => {
         data[questionValue][selectedCacheIndex]
       );
       setQuizData(cleanedResult);
+      
+      // Add to allQuizData collection with unique ID
+      const quizId = `quiz-${questionValue.substring(0, 15)}-${uuidv4().substring(0, 8)}`;
+      addQuizToCollection(quizId, cleanedResult);
     }
-  }, [data, questionValue, selectedCacheIndex]);
+  }, [data, questionValue, selectedCacheIndex, setQuizData, addQuizToCollection]);
+
+  useEffect(() => {
+    if (data && questionValue) {
+      const newData: Questions[] = [];
+      for (const value of data[questionValue]) {
+        newData.push(cleanUpResult(value));
+      }
+      setAllQuizData(newData);
+    }
+  }, [data, questionValue, setAllQuizData])
 
   const updateCountCacheQuestions = async (customQuestion?: string) => {
     setCountCacheQuestions(data?.[customQuestion || questionValue]?.length || 0);
@@ -222,6 +227,7 @@ const AskQuestion = () => {
         >
           <div className="flex flex-col gap-2">
             <input
+              readOnly
               className="border p-2 w-full"
               placeholder="Ask something..."
               disabled={isLoading}
@@ -274,7 +280,8 @@ const AskQuestion = () => {
           </div>
         </form>
       </div>
-      {quizData && <Quiz quizData={quizData} />}
+      {/* Quiz component now uses global state directly */}
+      {quizData && <Quiz />}
     </>
   );
 };

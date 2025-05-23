@@ -1,10 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import QuizQuestion from "./QuizQuestion";
-import type { QuizProps } from "./type";
+import { useQuizStore } from "@/store/quizStore";
 
-export default function Quiz({ quizData }: QuizProps) {
+export default function Quiz() {
+  // Get quizData and allQuizData from global store
+  const { quizData, allQuizData } = useQuizStore();
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [showResults, setShowResults] = useState(false);
+  const [useAllQuizzes, setUseAllQuizzes] = useState(false);
+  
+  // Combine all questions when useAllQuizzes is true
+  const activeQuizData = useMemo(() => {
+    if (!useAllQuizzes) return quizData;
+    // If using all quizzes, combine them
+    if (Object.keys(allQuizData).length === 0) return quizData;
+    
+    // Merge all questions from all quizzes
+    const allQuestions = allQuizData.flatMap(quiz => 
+      quiz ? quiz.questions : []
+    );
+
+    // Create a combined quiz data object
+    return allQuestions.length > 0 ? { questions: allQuestions } : quizData;
+  }, [quizData, allQuizData, useAllQuizzes]);
+  
+  // Return null if there's no quiz data
+  if (!activeQuizData) return null;
 
   const handleAnswerSelect = (questionIndex: number, option: string) => {
     setUserAnswers({
@@ -23,7 +44,7 @@ export default function Quiz({ quizData }: QuizProps) {
   };
 
   const getScore = () => {
-    return quizData.questions.reduce((score, question, index) => {
+    return activeQuizData.questions.reduce((score, question, index) => {
       return userAnswers[index] === question.answer ? score + 1 : score;
     }, 0);
   };
@@ -32,10 +53,32 @@ export default function Quiz({ quizData }: QuizProps) {
     <div className="mb-6 mt-4">
       <div className="flex flex-col items-center mb-4">
         <h2 className="text-xl">Questions</h2>
+        
+        {/* Toggle between current quiz and all quizzes */}
+        <div className="mb-3">
+          <label className="inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={useAllQuizzes}
+              onChange={() => {
+                setUseAllQuizzes(!useAllQuizzes);
+                // Reset answers when switching between modes
+                setUserAnswers({});
+                setShowResults(false);
+              }}
+              className="sr-only peer"
+            />
+            <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <span className="ms-3 text-sm font-medium">
+              {useAllQuizzes ? "Using All Quizzes" : "Using Current Quiz"}
+            </span>
+          </label>
+        </div>
+        
         <div className="flex">
           {showResults && (
             <span className="mr-4 font-bold">
-              Score: {getScore()}/{quizData.questions.length}
+              Score: {getScore()}/{activeQuizData.questions.length}
             </span>
           )}
           {!showResults ? (
@@ -43,7 +86,7 @@ export default function Quiz({ quizData }: QuizProps) {
               onClick={checkAnswers}
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
               disabled={
-                Object.keys(userAnswers).length < quizData.questions.length
+                Object.keys(userAnswers).length < activeQuizData.questions.length
               }
             >
               Check Answers
@@ -60,7 +103,7 @@ export default function Quiz({ quizData }: QuizProps) {
       </div>
 
       <div className="space-y-8 h-[calc(100vh-400px)] overflow-y-auto">
-        {quizData.questions.map((question, qIndex) => (
+        {activeQuizData.questions.map((question, qIndex) => (
           <QuizQuestion
             key={qIndex}
             index={qIndex}
