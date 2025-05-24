@@ -194,7 +194,7 @@ export default function StoriesPage() {
   const [componentError, setComponentError] = useState<string | null>(null);
   const [isStoryDialogOpen, setIsStoryDialogOpen] = useState(false);
   const [isAddStoryDialogOpen, setIsAddStoryDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading] = useState(true);
   const [newStory, setNewStory] = useState<Partial<Story>>({ 
     id: `story-${Date.now()}`, 
     title: "", 
@@ -263,11 +263,6 @@ export default function StoriesPage() {
     
     const mistakes = findMistakes(originalText, testText);
     
-    console.log("=== MISSED WORDS ANALYSIS ===");
-    console.log("Original text:", originalText);
-    console.log("Test text:", testText);
-    console.log("\nDetected mistakes:");
-    
     mistakes.forEach(mistake => {
       console.log(`- "${mistake.word}" (${mistake.type}${mistake.replacement ? ', replaced with "' + mistake.replacement + '"' : ''})`);
       console.log(`  Context: "...${mistake.context}..."`);
@@ -300,22 +295,24 @@ export default function StoriesPage() {
 
   // Fetch stories from API
   const fetchStories = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/stories');
-      if (!response.ok) {
-        throw new Error('Failed to fetch stories');
-      }
-      const data = await response.json();
-      setStories([...data, ...STORIES]);
-      return data;
-    } catch (error) {
-      setStories([...STORIES]);
-      console.error('Error fetching stories:', error);
-      return [];
-    } finally {
-      setIsLoading(false);
-    }
+    setStories([...STORIES]);
+    return [...STORIES];
+    // setIsLoading(true);
+    // try {
+    //   const response = await fetch('/api/stories');
+    //   if (!response.ok) {
+    //     throw new Error('Failed to fetch stories');
+    //   }
+    //   const data = await response.json();
+    //   setStories([...data, ...STORIES]);
+    //   return data;
+    // } catch (error) {
+    //   setStories([...STORIES]);
+    //   console.error('Error fetching stories:', error);
+    //   return [];
+    // } finally {
+    //   setIsLoading(false);
+    // }
   }, []);
 
   // Load reading attempts
@@ -514,6 +511,12 @@ export default function StoriesPage() {
     }
   }, [userSpeech, selectedStory?.id, processSpeech, saveReadingAttempt, matchedWords, missedWords]);
 
+  useEffect(() => {
+    if (!isListening && transcript) {
+      processResults();
+    }
+  }, [isListening, transcript, processResults]);
+
   // End the reading practice session
   const endReadingSession = useCallback(() => {
     // Stop speech recognition using the hook
@@ -675,6 +678,8 @@ export default function StoriesPage() {
       setIsSubmitting(false);
     }
   };
+
+  console.log("render")
 
   return (
     <ProtectedRoute>

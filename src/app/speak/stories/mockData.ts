@@ -3,6 +3,13 @@ import { Story } from "./page";
 // Mock stories for practice
 export const STORIES: Story[] = [
   {
+    "id": "my-story-1",
+    "title": "Second Interview",
+    "content": "Yesterday, I had an interview with a team based in the Philippines. Initially, I thought I was rejected because they abruptly left the meeting without notifying me, but they later emailed me to reschedule.\n\nDuring the rescheduled interview, they assigned me a task to enhance the autocomplete feature. I initially used debouncing to handle the problem, but then I switched to using a real-time API to fetch the autocorrection data. I mapped and cached the data, so when the user typed, their input was automatically corrected using the mapped data. This solution was successfully approved by the interviewer.\n\nSince I’m not entirely confident in my English, I’m now developing a feature in my application that reads stories aloud to help me expand my vocabulary and improve my pronunciation.",
+    "difficulty": "intermediate",
+    "words": 128
+  },
+  {
     id: "story-1",
     title: "The Determined Developer",
     content: `Once upon a time in a bustling tech hub, there lived a young developer named Maya. Every morning, she arrived at her tiny corner desk with a steaming cup of coffee and a heart full of ideas. Her dream was to create an app that would help people learn new languages through short, daily stories—just like the one you're reading now.
