@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -8,17 +7,12 @@ import TabNavigation from "@/components/TabNavigation";
 import { Sound } from "@/assets/sound";
 import { Mic } from "@/assets/mic";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import Dialog from "@/components/Dialog";
 import { TABS } from "../constants";
 import { STORIES } from "./mockData";
 
-// Add type definition for SpeechRecognition
-declare global {
-  interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-  }
-}
+// SpeechRecognition is now handled by the useSpeechRecognition hook
 
 export interface Story {
   id: string;
@@ -191,14 +185,13 @@ export default function StoriesPage() {
   const [storyParts, setStoryParts] = useState<StoryPart[]>([]);
   const [selectedPartIndex, setSelectedPartIndex] = useState(0);
   const [isReading, setIsReading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [userSpeech, setUserSpeech] = useState("");
   const [missedWords, setMissedWords] = useState<MissedWord[]>([]);
   const [matchedWords, setMatchedWords] = useState<WordMatch[]>([]);
   const [accuracy, setAccuracy] = useState(0);
   const [readingAttempts, setReadingAttempts] = useState<ReadingAttempt[]>([]);
   const [showResults, setShowResults] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [componentError, setComponentError] = useState<string | null>(null);
   const [isStoryDialogOpen, setIsStoryDialogOpen] = useState(false);
   const [isAddStoryDialogOpen, setIsAddStoryDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -211,8 +204,7 @@ export default function StoriesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
-  // Refs for managing speech recognition
-  const recognitionRef = useRef<any>(null);
+  // Refs for managing audio recording
   const audioChunksRef = useRef<Blob[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const storyContentRef = useRef<HTMLDivElement>(null);
@@ -220,6 +212,29 @@ export default function StoriesPage() {
 
   // Speech synthesis for reading the story
   const { speak, stop } = useSpeechSynthesis();
+  
+  // Speech recognition for listening to the user
+  const { 
+    transcript, 
+    isListening,
+    isSupported, 
+    startListening, 
+    stopListening, 
+    clearTranscript,
+    error: speechRecognitionError
+  } = useSpeechRecognition({
+    silenceTimeout: 2000,
+    language: 'en-US',
+    continuous: true,
+    interimResults: true
+  });
+  
+  // Update component error state when speech recognition error changes
+  useEffect(() => {
+    if (speechRecognitionError) {
+      setComponentError(`Speech recognition error: ${speechRecognitionError}`);
+    }
+  }, [speechRecognitionError]);
 
   // Function to split story content into parts (paragraphs)
   const splitStoryIntoParts = useCallback((content: string) => {
@@ -297,7 +312,6 @@ export default function StoriesPage() {
       return data;
     } catch (error) {
       console.error('Error fetching stories:', error);
-      setError('Failed to load stories. Please try again later.');
       return [];
     } finally {
       setIsLoading(false);
@@ -431,6 +445,15 @@ export default function StoriesPage() {
     },
     [selectedStory, storyParts, selectedPartIndex]
   );
+  
+  // Update userSpeech when transcript changes
+  useEffect(() => {
+    if (transcript) {
+      setUserSpeech(transcript);
+      // Process speech in real-time to provide feedback
+      processSpeech(transcript);
+    }
+  }, [transcript, processSpeech]);
 
   // Function to clear reading history
   const clearReadingHistory = useCallback(() => {
@@ -440,85 +463,25 @@ export default function StoriesPage() {
     setReadingAttempts([]);
   }, []);
 
-  // Initialize speech recognition
-  const initSpeechRecognition = useCallback(() => {
-    try {
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
+  // Function to reset the recognition state
+  const resetRecognitionState = useCallback(() => {
+    setUserSpeech("");
+    setMissedWords([]);
+    setMatchedWords([]);
+    setComponentError(null);
+    clearTranscript();
+  }, [clearTranscript]);
 
-      if (!SpeechRecognition) {
-        setError(
-          "Your browser doesn't support speech recognition. Try using Chrome."
-        );
-        return false;
-      }
-
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setUserSpeech("");
-        setMissedWords([]);
-        setMatchedWords([]);
-        setError(null);
-      };
-
-      recognition.onresult = (event) => {
-        let transcript = "";
-        for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript + " ";
-        }
-        setUserSpeech(transcript.trim());
-        // Process speech in real-time to provide feedback
-        processSpeech(transcript.trim());
-      };
-
-      recognition.onerror = (event) => {
-        console.error("Speech recognition error", event.error);
-        setError(`Speech recognition error: ${event.error}`);
-        stopListening();
-      };
-
-      recognition.onend = () => {
-        // This can be triggered even when there's an error
-        if (isListening) {
-          stopListening();
-        }
-      };
-
-      recognitionRef.current = recognition;
-      return true;
-    } catch (error) {
-      console.error("Error initializing speech recognition:", error);
-      setError(
-        "Failed to initialize speech recognition. Please try a different browser."
-      );
-      return false;
-    }
-  }, [isListening]);
-
-  // Start listening for speech
-  const startListening = useCallback(() => {
-    if (!recognitionRef.current) {
-      if (!initSpeechRecognition()) {
-        return;
-      }
-    }
-
+  // Begin the reading practice session
+  const beginReadingSession = useCallback(() => {
     try {
       // Reset state
-      setUserSpeech("");
-      setMissedWords([]);
-      setMatchedWords([]);
+      resetRecognitionState();
       setShowResults(false);
-      setIsListening(true);
       audioChunksRef.current = [];
       startTimeRef.current = Date.now();
 
-      // Start recording audio
+      // Start recording audio (for saving the attempt)
       navigator.mediaDevices
         .getUserMedia({ audio: true })
         .then((stream) => {
@@ -535,20 +498,18 @@ export default function StoriesPage() {
         })
         .catch((err) => {
           console.error("Error accessing microphone:", err);
-          setError(
+          setComponentError(
             "Could not access your microphone. Please check permissions."
           );
-          setIsListening(false);
         });
 
       // Start speech recognition
-      recognitionRef.current.start();
+      startListening();
     } catch (error) {
-      console.error("Error starting speech recognition:", error);
-      setError("Failed to start speech recognition. Please try again.");
-      setIsListening(false);
+      console.error("Error starting reading session:", error);
+      setComponentError("Failed to start reading session. Please try again.");
     }
-  }, [initSpeechRecognition]);
+  }, [resetRecognitionState, startListening]);
 
   // Process final results
   const processResults = useCallback(() => {
@@ -575,18 +536,10 @@ export default function StoriesPage() {
     }
   }, [userSpeech, selectedStory?.id, processSpeech, saveReadingAttempt, matchedWords, missedWords]);
 
-  // Stop listening for speech
-  const stopListening = useCallback(() => {
-    setIsListening(false);
-
-    // Stop speech recognition
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (_e: unknown) {
-        console.log("Recognition already stopped", _e);
-      }
-    }
+  // End the reading practice session
+  const endReadingSession = useCallback(() => {
+    // Stop speech recognition using the hook
+    stopListening();
 
     // Stop media recorder
     if (
@@ -605,7 +558,7 @@ export default function StoriesPage() {
 
     // Process final results
     processResults();
-  }, [processResults]);
+  }, [processResults, stopListening]);
 
   // Set the selected part index and save to localStorage
   const setPartIndexWithCache = useCallback((index: number) => {
@@ -683,21 +636,18 @@ export default function StoriesPage() {
   // Toggle the reading practice mode
   const toggleReading = useCallback(() => {
     if (isListening) {
-      stopListening();
+      endReadingSession();
     } else {
-      startListening();
+      beginReadingSession();
     }
-  }, [isListening, startListening, stopListening]);
+  }, [isListening, beginReadingSession, endReadingSession]);
 
   // Reset the reading practice
   const resetReading = useCallback(() => {
-    setUserSpeech("");
-    setMissedWords([]);
-    setMatchedWords([]);
+    resetRecognitionState();
     setAccuracy(0);
     setShowResults(false);
-    setError(null);
-  }, []);
+  }, [resetRecognitionState]);
 
   // Handle adding a new story
   const handleAddStory = async () => {
@@ -1007,12 +957,12 @@ export default function StoriesPage() {
 
               <button
                 onClick={toggleReading}
-                disabled={isReading}
+                disabled={isReading || !isSupported}
                 className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
                   isListening
                     ? "bg-red-500 hover:bg-red-600 text-white"
                     : "bg-blue-500 hover:bg-blue-600 text-white"
-                } ${isReading ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${(isReading || !isSupported) ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <Mic isListening={isListening} />
                 <span className="ml-2">
@@ -1040,14 +990,16 @@ export default function StoriesPage() {
             </div>
 
             {/* Error message */}
-            {error && (
+            {(componentError || !isSupported) && (
               <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md">
-                {error}
+                {!isSupported ? 
+                  "Your browser doesn't support speech recognition. Try using Chrome or Edge." : 
+                  componentError}
                 <button 
-                  onClick={fetchStories}
+                  onClick={() => setComponentError(null)}
                   className="ml-2 underline text-blue-600 hover:text-blue-800"
                 >
-                  Try Again
+                  Dismiss
                 </button>
               </div>
             )}
