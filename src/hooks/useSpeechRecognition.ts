@@ -1,3 +1,5 @@
+"use client";
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -94,13 +96,51 @@ export function useSpeechRecognition(
     // Handle speech recognition results
     recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
       lastSpeechTimeRef.current = Date.now();
-
-      const transcript = Array.from(event.results)
-        .map((result: any) => result[0])
-        .map((result: SpeechRecognitionResultItem) => result.transcript)
-        .join('');
-
-      setTranscript(transcript);
+      
+      // Check if this is a mobile Android device - different handling needed
+      const isAndroid = /android/i.test(navigator.userAgent);
+      
+      if (isAndroid) {
+        // For Android, we need to handle interim results differently to prevent duplication
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        // Process each result individually
+        // resultIndex might not be directly available in the type definition
+        // but it exists in the actual implementation
+        const resultIndex = (event as any).resultIndex || 0;
+        
+        for (let i = resultIndex; i < event.results.length; ++i) {
+          const result = event.results[i];
+          const transcriptText = result[0].transcript;
+          
+          // Check if this result is final
+          if (result.isFinal) {
+            finalTranscript += transcriptText;
+          } else {
+            interimTranscript += transcriptText;
+          }
+        }
+        
+        // For Android, only use final results to prevent duplication
+        if (finalTranscript.trim()) {
+          setTranscript(prevTranscript => {
+            // Avoid duplicating text that's already in the transcript
+            if (prevTranscript.endsWith(finalTranscript)) {
+              return prevTranscript;
+            }
+            return finalTranscript;
+          });
+        }
+      } else {
+        // For other platforms, use the original approach
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0])
+          .map((result: SpeechRecognitionResultItem) => result.transcript)
+          .join('');
+          
+        setTranscript(transcript);
+      }
 
       // Start the auto-stop timer after getting results
       if (silenceTimerRef.current) {
@@ -119,12 +159,33 @@ export function useSpeechRecognition(
     // This event fires when recognition stops for any reason
     recognitionRef.current.onend = () => {
       console.log('Speech recognition ended');
-      setIsListening(false);
+      
+      // Check if we're on Android and the stopping was unexpected
+      const isAndroid = /android/i.test(navigator.userAgent);
+      
+      if (isAndroid && isListening) {
+        console.log('Android detected, auto-restarting speech recognition');
+        // Small delay to allow the previous session to fully terminate
+        setTimeout(() => {
+          try {
+            if (recognitionRef.current) {
+              recognitionRef.current.start();
+            }
+          } catch (err) {
+            console.error('Error restarting speech recognition:', err);
+            setIsListening(false);
+            setError('Failed to restart speech recognition');
+          }
+        }, 300);
+      } else {
+        // Normal behavior for non-Android or when manually stopped
+        setIsListening(false);
 
-      // Clear the silence timer if it exists
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
+        // Clear the silence timer if it exists
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
       }
     };
 
@@ -146,7 +207,7 @@ export function useSpeechRecognition(
         silenceTimerRef.current = null;
       }
     };
-  }, [silenceTimeout]);
+  }, [silenceTimeout, isListening]);
   
   // Initialize speech recognition
   useEffect(() => {
@@ -222,7 +283,17 @@ export function useSpeechRecognition(
     setError(null);
     setIsListening(true);
     
+    // Check if we're on Android
+    const isAndroid = /android/i.test(navigator.userAgent);
+    
     try {
+      // On Android, we may need to set shorter recognition segments
+      if (isAndroid) {
+        console.log('Starting speech recognition on Android');
+        // Android often has shorter timeouts for speech recognition
+        recognitionRef.current.maxAlternatives = 1; // Reduce processing load
+      }
+      
       recognitionRef.current.start();
     } catch (err) {
       console.error('Error starting speech recognition:', err);
