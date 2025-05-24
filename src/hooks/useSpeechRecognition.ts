@@ -108,7 +108,7 @@ export function useSpeechRecognition(
       }
 
       silenceTimerRef.current = setTimeout(() => {
-        if (recognitionRef.current && Date.now() - lastSpeechTimeRef.current >= silenceTimeout) {
+        if (silenceTimeout !== 0 && recognitionRef.current && Date.now() - lastSpeechTimeRef.current >= silenceTimeout) {
           console.log(`Auto-stopping after ${silenceTimeout/1000} seconds of silence`);
           recognitionRef.current.stop();
           // Don't set isListening here, we'll update it in onend handler

@@ -223,7 +223,7 @@ export default function StoriesPage() {
     clearTranscript,
     error: speechRecognitionError
   } = useSpeechRecognition({
-    silenceTimeout: 2000,
+    silenceTimeout: 0,
     language: 'en-US',
     continuous: true,
     interimResults: true
