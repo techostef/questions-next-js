@@ -28,6 +28,12 @@ export interface Story {
   words: number;
 }
 
+interface StoryPart {
+  part: number;
+  content: string;
+  words: number;
+}
+
 interface WordMatch {
   word: string;
   matched: boolean;
@@ -47,19 +53,49 @@ interface ReadingAttempt {
 export default function StoriesPage() {
   // State for stories and reading practice
   const [selectedStory, setSelectedStory] = useState<Story>(STORIES[0]);
+  const [storyParts, setStoryParts] = useState<StoryPart[]>([]);
+  const [selectedPartIndex, setSelectedPartIndex] = useState(0);
   const [isReading, setIsReading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   
-  // Custom setter for selected story that also caches the selection
+  // Function to split story content into parts (paragraphs)
+  const splitStoryIntoParts = useCallback((content: string) => {
+    // Split by paragraphs (empty lines)
+    const paragraphs = content.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
+    
+    // If no paragraphs are found, treat the whole content as one part
+    if (paragraphs.length === 0) {
+      return [{
+        part: 1,
+        content: content,
+        words: content.split(/\s+/).filter(word => word.length > 0).length
+      }];
+    }
+    
+    // Create story parts from paragraphs
+    return paragraphs.map((paragraph, index) => ({
+      part: index + 1,
+      content: paragraph,
+      words: paragraph.split(/\s+/).filter(word => word.length > 0).length
+    }));
+  }, []);
+  
+  // Custom setter for selected story that also caches the selection and splits into parts
   const setSelectedStoryWithCache = useCallback((story: Story) => {
     setSelectedStory(story);
+    // Split story into parts
+    const parts = splitStoryIntoParts(story.content);
+    setStoryParts(parts);
+    setSelectedPartIndex(0); // Reset to first part
+    
     // Save to localStorage
     try {
       localStorage.setItem("selectedStoryId", story.id);
+      localStorage.setItem("selectedPartIndex", "0"); // Reset part index
     } catch (error) {
       console.error("Error saving selected story:", error);
     }
-  }, []);
+  }, [splitStoryIntoParts]);
   const [userSpeech, setUserSpeech] = useState("");
   const [missedWords, setMissedWords] = useState<string[]>([]);
   const [matchedWords, setMatchedWords] = useState<WordMatch[]>([]);
@@ -94,7 +130,7 @@ export default function StoriesPage() {
       }
     };
 
-    // Load selected story
+    // Load selected story and part
     const loadSelectedStory = () => {
       try {
         const savedStoryId = localStorage.getItem("selectedStoryId");
@@ -102,7 +138,24 @@ export default function StoriesPage() {
           const story = STORIES.find(s => s.id === savedStoryId);
           if (story) {
             setSelectedStory(story);
+            
+            // Split the story into parts
+            const parts = splitStoryIntoParts(story.content);
+            setStoryParts(parts);
+            
+            // Load selected part index
+            const savedPartIndex = localStorage.getItem("selectedPartIndex");
+            if (savedPartIndex) {
+              const partIndex = parseInt(savedPartIndex, 10);
+              if (!isNaN(partIndex) && partIndex >= 0 && partIndex < parts.length) {
+                setSelectedPartIndex(partIndex);
+              }
+            }
           }
+        } else {
+          // Default story initialization
+          const parts = splitStoryIntoParts(selectedStory.content);
+          setStoryParts(parts);
         }
       } catch (error) {
         console.error("Error loading selected story:", error);
@@ -111,7 +164,7 @@ export default function StoriesPage() {
 
     loadAttempts();
     loadSelectedStory();
-  }, []);
+  }, [selectedStory.content, splitStoryIntoParts]);
   
   // Function to clear reading history
   const clearReadingHistory = useCallback(() => {
@@ -281,8 +334,11 @@ export default function StoriesPage() {
   // Process speech for word matching
   const processSpeech = useCallback(
     (speech: string, isFinal: boolean = false) => {
-      if (!speech || !selectedStory)
+      if (!speech || !selectedStory || storyParts.length === 0)
         return { accuracy: 0, missedWords: [], matchedWords: [] };
+        
+      // Get content of the current part
+      const contentToProcess = storyParts[selectedPartIndex].content;
 
       // Normalize text by removing punctuation and converting to lowercase
       const normalizeText = (text: string) => {
@@ -293,8 +349,8 @@ export default function StoriesPage() {
           .trim();
       };
 
-      // Get all words from the story
-      const storyWords = normalizeText(selectedStory.content)
+      // Get all words from the story part
+      const storyWords = normalizeText(contentToProcess)
         .split(" ")
         .filter((word) => word.length > 0);
 
@@ -347,7 +403,7 @@ export default function StoriesPage() {
         matchedWords: matchedWordsWithTimestamp,
       };
     },
-    [selectedStory]
+    [selectedStory, storyParts, selectedPartIndex]
   );
 
   // Save reading attempt to localStorage
@@ -367,11 +423,24 @@ export default function StoriesPage() {
     [readingAttempts]
   );
 
-  // Play the selected story using text-to-speech
+  // Set the selected part index and save to localStorage
+  const setPartIndexWithCache = useCallback((index: number) => {
+    if (index >= 0 && index < storyParts.length) {
+      setSelectedPartIndex(index);
+      try {
+        localStorage.setItem("selectedPartIndex", index.toString());
+      } catch (error) {
+        console.error("Error saving selected part index:", error);
+      }
+    }
+  }, [storyParts.length]);
+
+  // Play the selected story part using text-to-speech
   const playStory = useCallback(() => {
     setIsReading(true);
-    speak(selectedStory.content, false);
-  }, [selectedStory, speak]);
+    const contentToRead = storyParts.length > 0 ? storyParts[selectedPartIndex].content : selectedStory.content;
+    speak(contentToRead, false);
+  }, [selectedPartIndex, selectedStory.content, speak, storyParts]);
 
   // Stop playback
   const stopPlayback = useCallback(() => {
@@ -381,7 +450,10 @@ export default function StoriesPage() {
 
   // Generate highlighted text with matched and missed words
   const getHighlightedText = useCallback(() => {
-    if (!showResults || !selectedStory) return selectedStory.content;
+    if (!showResults || !selectedStory || storyParts.length === 0) 
+      return selectedStory.content;
+      
+    const contentToHighlight = storyParts[selectedPartIndex].content;
 
     const normalizeText = (text: string) => {
       return text
@@ -396,7 +468,7 @@ export default function StoriesPage() {
     let indexWord = -1;
 
     // Create spans with appropriate classes for highlighting
-    return selectedStory.content
+    return contentToHighlight
       .split(/\b/)
       .map((part) => {
         const normalized = normalizeText(part);
@@ -420,7 +492,7 @@ export default function StoriesPage() {
         }
       })
       .join("");
-  }, [selectedStory, missedWords, showResults, userSpeech]);
+  }, [selectedStory, missedWords, showResults, userSpeech, storyParts, selectedPartIndex]);
 
   // Toggle the reading practice mode
   const toggleReading = useCallback(() => {
@@ -482,6 +554,47 @@ export default function StoriesPage() {
                   </span>
                   <span className="text-gray-500">{selectedStory.words} words</span>
                 </div>
+                
+                {/* Story parts navigation */}
+                {storyParts.length > 1 && (
+                  <div className="mt-4 border-t pt-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium">Story Parts</span>
+                      <span className="text-xs text-gray-500">{selectedPartIndex + 1} of {storyParts.length}</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <button
+                        onClick={() => setPartIndexWithCache(selectedPartIndex - 1)}
+                        disabled={selectedPartIndex === 0 || isListening || isReading}
+                        className={`px-2 py-1 rounded ${selectedPartIndex === 0 || isListening || isReading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                      >
+                        ← Previous
+                      </button>
+                      
+                      <div className="flex space-x-1">
+                        {storyParts.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setPartIndexWithCache(index)}
+                            disabled={isListening || isReading}
+                            className={`w-6 h-6 rounded-full text-xs flex items-center justify-center ${selectedPartIndex === index ? 'bg-blue-500 text-white' : isListening || isReading ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                          >
+                            {index + 1}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      <button
+                        onClick={() => setPartIndexWithCache(selectedPartIndex + 1)}
+                        disabled={selectedPartIndex === storyParts.length - 1 || isListening || isReading}
+                        className={`px-2 py-1 rounded ${selectedPartIndex === storyParts.length - 1 || isListening || isReading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -629,9 +742,17 @@ export default function StoriesPage() {
 
             {/* Story content */}
             <div className="relative">
-              <h3 className="text-lg font-medium mb-2">
-                {selectedStory.title}
-              </h3>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-medium">
+                  {selectedStory.title} {storyParts.length > 1 && <span className="text-sm font-normal text-gray-500">- Part {selectedPartIndex + 1}</span>}
+                </h3>
+                
+                {storyParts.length > 0 && (
+                  <div className="text-sm text-gray-500">
+                    {storyParts[selectedPartIndex].words} words
+                  </div>
+                )}
+              </div>
 
               {isListening && (
                 <div className="absolute right-0 top-0">
@@ -658,18 +779,33 @@ export default function StoriesPage() {
                     dangerouslySetInnerHTML={{ __html: getHighlightedText() }}
                   />
                 ) : (
-                  selectedStory.content.split("\n").map((line, lineIndex) => (
-                    <p key={lineIndex} className="mb-2">
-                      {line.split(" ").map((word, wordIndex) => (
-                        <span
-                          key={`${lineIndex}-${wordIndex}`}
-                          className="inline-block mr-1"
-                        >
-                          {word}
-                        </span>
-                      ))}
-                    </p>
-                  ))
+                  storyParts.length > 0 ? (
+                    storyParts[selectedPartIndex].content.split("\n").map((line, lineIndex) => (
+                      <p key={lineIndex} className="mb-2">
+                        {line.split(" ").map((word, wordIndex) => (
+                          <span
+                            key={`${lineIndex}-${wordIndex}`}
+                            className="inline-block mr-1"
+                          >
+                            {word}
+                          </span>
+                        ))}
+                      </p>
+                    ))
+                  ) : (
+                    selectedStory.content.split("\n").map((line, lineIndex) => (
+                      <p key={lineIndex} className="mb-2">
+                        {line.split(" ").map((word, wordIndex) => (
+                          <span
+                            key={`${lineIndex}-${wordIndex}`}
+                            className="inline-block mr-1"
+                          >
+                            {word}
+                          </span>
+                        ))}
+                      </p>
+                    ))
+                  )
                 )}
               </div>
             </div>
