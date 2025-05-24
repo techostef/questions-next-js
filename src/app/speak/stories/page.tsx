@@ -46,8 +46,142 @@ interface ReadingAttempt {
   recordedAudio?: string; // Base64 encoded audio
   accuracy: number;
   duration: number;
-  missedWords: string[];
+  missedWords: MissedWord[];
   matchedWords: WordMatch[];
+}
+
+interface MissedWord {
+  index: number;
+  word: string
+}
+
+function findMistakes(original, test) {
+  // Helper function to clean and split text into words
+  const clean = (str) =>
+    str
+      .toLowerCase()
+      .replace(/[.,!?;:"']/g, "") // remove punctuation
+      .split(/\s+/) // split by any whitespace
+      .filter(w => w.length > 0); // remove empty strings
+
+  const originalWords = clean(original);
+  const testWords = clean(test);
+
+  // Use Levenshtein distance to find best alignment
+  const results = findBestAlignment(originalWords, testWords);
+  return results;
+}
+
+function findBestAlignment(originalWords, testWords) {
+  // Use dynamic programming to find the best alignment
+  const mistakes = [];
+  let i = 0;
+  let j = 0;
+  
+  // Track previous matches to detect substitution patterns
+  const substitutions = {};
+  
+  while (i < originalWords.length && j < testWords.length) {
+    if (originalWords[i] === testWords[j]) {
+      // Words match exactly
+      i++;
+      j++;
+    } else if (j + 1 < testWords.length && originalWords[i] === testWords[j + 1]) {
+      // Extra word in test - skip it
+      j++;
+    } else if (i + 1 < originalWords.length && originalWords[i + 1] === testWords[j]) {
+      // Missing word in test
+      mistakes.push({
+        index: i,
+        word: originalWords[i],
+        type: 'missing',
+        context: getContext(originalWords, i)
+      });
+      i++;
+    } else {
+      // Word substitution - check for phonetic or semantic similarity
+      if (areSimilarWords(originalWords[i], testWords[j])) {
+        // Similar but not exact match
+        substitutions[originalWords[i]] = testWords[j];
+        mistakes.push({
+          index: i,
+          word: originalWords[i],
+          type: 'substitution',
+          replacement: testWords[j],
+          context: getContext(originalWords, i)
+        });
+      } else {
+        // Completely different words
+        mistakes.push({
+          index: i,
+          word: originalWords[i],
+          type: 'missing',
+          context: getContext(originalWords, i)
+        });
+      }
+      i++;
+      j++;
+    }
+  }
+  
+  // Add remaining missing words from original
+  while (i < originalWords.length) {
+    mistakes.push({
+      index: i,
+      word: originalWords[i],
+      type: 'missing',
+      context: getContext(originalWords, i)
+    });
+    i++;
+  }
+  
+  return mistakes;
+}
+
+// Check if words are similar (could be expanded with more sophisticated checks)
+function areSimilarWords(word1, word2) {
+  // Simple character-based similarity
+  const similarity = calculateSimilarity(word1, word2);
+  return similarity > 0.5; // Threshold for similarity
+}
+
+// Calculate string similarity ratio using Levenshtein distance
+function calculateSimilarity(s1, s2) {
+  if (s1.length === 0 || s2.length === 0) return 0;
+  
+  // Calculate Levenshtein distance
+  const track = Array(s2.length + 1).fill(null).map(() => 
+    Array(s1.length + 1).fill(null));
+  
+  for (let i = 0; i <= s1.length; i += 1) {
+    track[0][i] = i;
+  }
+  
+  for (let j = 0; j <= s2.length; j += 1) {
+    track[j][0] = j;
+  }
+  
+  for (let j = 1; j <= s2.length; j += 1) {
+    for (let i = 1; i <= s1.length; i += 1) {
+      const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      track[j][i] = Math.min(
+        track[j][i - 1] + 1, // deletion
+        track[j - 1][i] + 1, // insertion
+        track[j - 1][i - 1] + indicator, // substitution
+      );
+    }
+  }
+  
+  const distance = track[s2.length][s1.length];
+  const maxLength = Math.max(s1.length, s2.length);
+  return maxLength > 0 ? (maxLength - distance) / maxLength : 1;
+}
+
+// Get context around a word to help identify its position
+function getContext(words, index, windowSize = 2) {
+  const start = Math.max(0, index - windowSize);
+  const end = Math.min(words.length, index + windowSize + 1);
+  return words.slice(start, end).join(' ');
 }
 
 export default function StoriesPage() {
@@ -59,7 +193,7 @@ export default function StoriesPage() {
   const [isReading, setIsReading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [userSpeech, setUserSpeech] = useState("");
-  const [missedWords, setMissedWords] = useState<string[]>([]);
+  const [missedWords, setMissedWords] = useState<MissedWord[]>([]);
   const [matchedWords, setMatchedWords] = useState<WordMatch[]>([]);
   const [accuracy, setAccuracy] = useState(0);
   const [readingAttempts, setReadingAttempts] = useState<ReadingAttempt[]>([]);
@@ -107,6 +241,36 @@ export default function StoriesPage() {
       content: paragraph,
       words: paragraph.split(/\s+/).filter(word => word.length > 0).length
     }));
+  }, []);
+  // Test the improved algorithm with the example sentences
+  const testFindMistakes = () => {
+    const originalText = `Yesterday, I had an interview with a team based in the Philippines. Initially, I thought I was rejected because they abruptly left the meeting without notifying me, but they later emailed me to reschedule.`;
+    const testText = `yesterday I had an interview with a team based in the Philippines initially I thought I was rejected because they are probably left the meeting without notifying me but the letter emailed me to reschedule`;
+    
+    const mistakes = findMistakes(originalText, testText);
+    
+    console.log("=== MISSED WORDS ANALYSIS ===");
+    console.log("Original text:", originalText);
+    console.log("Test text:", testText);
+    console.log("\nDetected mistakes:");
+    
+    mistakes.forEach(mistake => {
+      console.log(`- "${mistake.word}" (${mistake.type}${mistake.replacement ? ', replaced with "' + mistake.replacement + '"' : ''})`);
+      console.log(`  Context: "...${mistake.context}..."`);
+    });
+    
+    // Filter for specific words like "abruptly"
+    const abruptlyMistake = mistakes.find(m => m.word === "abruptly");
+    if (abruptlyMistake) {
+      console.log("\nFound 'abruptly' missing:", abruptlyMistake);
+    }
+    
+    return mistakes;
+  };
+  
+  // Run the test once on component initialization
+  useEffect(() => {
+    testFindMistakes();
   }, []);
 
   // Custom setter for selected story that also caches 
@@ -181,6 +345,92 @@ export default function StoriesPage() {
     loadSelectedStory();
     // We don't need to call fetchStories() explicitly here as it's already called in loadSelectedStory()
   }, [loadReadingAttempts, loadSelectedStory]);
+
+  // Save reading attempt to localStorage
+  const saveReadingAttempt = useCallback(
+    (attempt: ReadingAttempt) => {
+      try {
+        // Get existing attempts
+        const existingData = localStorage.getItem("readingAttempts");
+        const attempts = existingData ? JSON.parse(existingData) : [];
+        
+        // Add new attempt
+        attempts.push(attempt);
+        
+        // Save back to localStorage (keep only last 50 attempts)
+        localStorage.setItem(
+          "readingAttempts",
+          JSON.stringify(attempts.slice(-50))
+        );
+        
+        // Update state
+        setReadingAttempts(attempts);
+      } catch (error) {
+        console.error("Error saving reading attempt:", error);
+      }
+    },
+    []
+  );
+
+  // Process speech for word matching
+  const processSpeech = useCallback(
+    (speech: string) => {
+      if (!selectedStory || storyParts.length === 0) return { accuracy: 0 };
+
+      const storyText = storyParts[selectedPartIndex].content;
+      const currentTime = Date.now();
+
+      // Use the improved findMistakes function to detect word differences
+      const mistakes = findMistakes(storyText, speech);
+
+      // Map the mistakes to our application's data structure
+      const listMissedWords: MissedWord[] = mistakes.map((mistake) => ({
+        index: mistake.index,
+        word: mistake.word,
+        type: mistake.type,
+      }));
+
+      // Create matched words list (words not in the mistakes list)
+      const storyWords = storyText
+        .toLowerCase()
+        .replace(/[.,!?;:"']/g, "")
+        .split(/\s+/)
+        .filter((word) => word.length > 0);
+
+      const matchedWordsWithTimestamp: WordMatch[] = [];
+      const storyWordsMatched = new Set<number>();
+
+      // For each word in the story, check if it's not in the missed words
+      storyWords.forEach((word, index) => {
+        const isMissed = listMissedWords.some((missed) => missed.index === index);
+        
+        if (!isMissed) {
+          storyWordsMatched.add(index);
+          matchedWordsWithTimestamp.push({
+            word: word,
+            matched: true,
+            timestamp: currentTime - (storyWords.length - index) * 100, // Simulate timestamps
+          });
+        }
+      });
+
+      // Always update state regardless of isFinal
+      // This ensures that our UI shows the correct values
+      setMissedWords(listMissedWords);
+      setMatchedWords(matchedWordsWithTimestamp);
+      
+      // Calculate accuracy based on matched words
+      const accuracy = storyWords.length > 0
+        ? Math.round((storyWordsMatched.size / storyWords.length) * 100)
+        : 0;
+      
+      // Always update accuracy
+      setAccuracy(accuracy);
+
+      return { accuracy, missedWords: listMissedWords, matchedWords: matchedWordsWithTimestamp };
+    },
+    [selectedStory, storyParts, selectedPartIndex]
+  );
 
   // Function to clear reading history
   const clearReadingHistory = useCallback(() => {
@@ -300,6 +550,31 @@ export default function StoriesPage() {
     }
   }, [initSpeechRecognition]);
 
+  // Process final results
+  const processResults = useCallback(() => {
+    if (userSpeech.trim().length > 0) {
+      // Get accuracy based on missed words
+      const finalResults = processSpeech(userSpeech);
+      
+      // Calculate duration (just an example, in a real app this would be more accurate)
+      const duration = matchedWords.length > 0 
+        ? matchedWords[matchedWords.length - 1].timestamp - matchedWords[0].timestamp 
+        : 0;
+
+      // Save reading attempt
+      saveReadingAttempt({
+        storyId: selectedStory?.id || "",
+        date: Date.now(),
+        accuracy: finalResults.accuracy,
+        duration,
+        missedWords: missedWords,
+        matchedWords: matchedWords
+      });
+
+      setShowResults(true);
+    }
+  }, [userSpeech, selectedStory?.id, processSpeech, saveReadingAttempt, matchedWords, missedWords]);
+
   // Stop listening for speech
   const stopListening = useCallback(() => {
     setIsListening(false);
@@ -328,116 +603,9 @@ export default function StoriesPage() {
       }
     }
 
-    // Calculate final results
-    if (userSpeech) {
-      const finalResults = processSpeech(userSpeech, true);
-      const duration = (Date.now() - startTimeRef.current) / 1000; // in seconds
-
-      // Save reading attempt
-      saveReadingAttempt({
-        storyId: selectedStory?.id || "",
-        date: Date.now(),
-        accuracy: finalResults.accuracy,
-        duration,
-        missedWords: finalResults.missedWords,
-        matchedWords: finalResults.matchedWords,
-      });
-
-      setShowResults(true);
-    }
-  }, [userSpeech, selectedStory?.id]);
-
-  // Process speech for word matching
-  const processSpeech = useCallback(
-    (speech: string, isFinal: boolean = false) => {
-      if (!speech || !selectedStory || storyParts.length === 0)
-        return { accuracy: 0, missedWords: [], matchedWords: [] };
-        
-      // Get content of the current part
-      const contentToProcess = storyParts[selectedPartIndex].content;
-
-      // Normalize text by removing punctuation and converting to lowercase
-      const normalizeText = (text: string) => {
-        return text
-          .toLowerCase()
-          .replace(/[^\w\s]/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-      };
-
-      // Get all words from the story part
-      const storyWords = normalizeText(contentToProcess)
-        .split(" ")
-        .filter((word) => word.length > 0);
-
-      // Get words from user speech
-      const userWords = normalizeText(speech)
-        .split(" ")
-        .filter((word) => word.length > 0);
-
-      // Track which words were matched
-      const storyWordsMatched = new Set<number>();
-      const matchedWordsWithTimestamp: WordMatch[] = [];
-      const currentTime = Date.now();
-      const listMissedWords: string[] = [];
-
-      // For each user word, find if it appears in the story
-      userWords.forEach((userWord, index) => {
-        // if (userWord.length < 2) return; // Skip very short words
-
-        // Find the first unmatched occurrence of this word in the story
-        const storyItem = storyWords[index];
-
-        if (storyItem.toLowerCase() === userWord.toLowerCase()) {
-          storyWordsMatched.add(index);
-          matchedWordsWithTimestamp.push({
-            word: userWord,
-            matched: true,
-            timestamp: currentTime,
-          });
-        } else {
-          listMissedWords.push(storyItem);
-        }
-      });
-
-      // Calculate accuracy
-      const accuracyPercent =
-        storyWords.length > 0
-          ? Math.round((storyWordsMatched.size / storyWords.length) * 100)
-          : 0;
-
-      // Update state if this is final processing
-      if (isFinal) {
-        setMissedWords(listMissedWords);
-        setMatchedWords(matchedWordsWithTimestamp);
-        setAccuracy(accuracyPercent);
-      }
-
-      return {
-        accuracy: accuracyPercent,
-        missedWords: listMissedWords,
-        matchedWords: matchedWordsWithTimestamp,
-      };
-    },
-    [selectedStory, storyParts, selectedPartIndex]
-  );
-
-  // Save reading attempt to localStorage
-  const saveReadingAttempt = useCallback(
-    (attempt: ReadingAttempt) => {
-      try {
-        const updatedAttempts = [...readingAttempts, attempt];
-        setReadingAttempts(updatedAttempts);
-        localStorage.setItem(
-          "readingAttempts",
-          JSON.stringify(updatedAttempts)
-        );
-      } catch (error) {
-        console.error("Error saving reading attempt:", error);
-      }
-    },
-    [readingAttempts]
-  );
+    // Process final results
+    processResults();
+  }, [processResults]);
 
   // Set the selected part index and save to localStorage
   const setPartIndexWithCache = useCallback((index: number) => {
@@ -479,7 +647,6 @@ export default function StoriesPage() {
         .trim();
     };
 
-    const missedWordsSet = new Set(missedWords);
     const userSpeechWords = normalizeText(userSpeech).split(" ");
     let indexWord = -1;
 
@@ -489,11 +656,14 @@ export default function StoriesPage() {
       .map((part) => {
         const normalized = normalizeText(part);
         const skipMatch = !normalized  || normalized.length < 2
-        const excludeSkip = normalized !== 'a'
-        if (skipMatch && excludeSkip ) return part;
+        const skipWord = normalized === ', ' || normalized === ','
+        const excludeSkip = normalized !== 'a' && normalized !== 'i' 
+        if (skipWord) return part;
+        if (skipMatch && excludeSkip) return part;
         indexWord++;
 
-        if (missedWordsSet.has(normalized)) {
+        const findMissedWord = missedWords.find((_value, index) => indexWord === index);
+        if (findMissedWord?.word === normalized) {
           return `<span class="text-red-500 font-bold">${part}</span>`;
         }
 
@@ -911,13 +1081,13 @@ export default function StoriesPage() {
                   <div className="mb-3">
                     <h4 className="font-medium mb-1">Words you missed:</h4>
                     <div className="flex flex-wrap gap-2">
-                      {missedWords.map((word, index) => (
+                      {missedWords.map((item, index) => (
                         <span
                           key={index}
-                          onClick={() => speak(word)}
+                          onClick={() => speak(item.word)}
                           className="px-2 py-1 bg-red-100 text-red-800 rounded"
                         >
-                          {word}
+                          {item.word}
                         </span>
                       ))}
                     </div>
