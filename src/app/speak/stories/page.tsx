@@ -52,12 +52,41 @@ interface ReadingAttempt {
 
 export default function StoriesPage() {
   // State for stories and reading practice
-  const [selectedStory, setSelectedStory] = useState<Story>(STORIES[0]);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [storyParts, setStoryParts] = useState<StoryPart[]>([]);
   const [selectedPartIndex, setSelectedPartIndex] = useState(0);
   const [isReading, setIsReading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  
+  const [userSpeech, setUserSpeech] = useState("");
+  const [missedWords, setMissedWords] = useState<string[]>([]);
+  const [matchedWords, setMatchedWords] = useState<WordMatch[]>([]);
+  const [accuracy, setAccuracy] = useState(0);
+  const [readingAttempts, setReadingAttempts] = useState<ReadingAttempt[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isStoryDialogOpen, setIsStoryDialogOpen] = useState(false);
+  const [isAddStoryDialogOpen, setIsAddStoryDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [newStory, setNewStory] = useState<Partial<Story>>({ 
+    id: `story-${Date.now()}`, 
+    title: "", 
+    content: "", 
+    difficulty: "beginner" 
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
+  // Refs for managing speech recognition
+  const recognitionRef = useRef<any>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const storyContentRef = useRef<HTMLDivElement>(null);
+  const startTimeRef = useRef<number>(0);
+
+  // Speech synthesis for reading the story
+  const { speak, stop } = useSpeechSynthesis();
+
   // Function to split story content into parts (paragraphs)
   const splitStoryIntoParts = useCallback((content: string) => {
     // Split by paragraphs (empty lines)
@@ -79,93 +108,80 @@ export default function StoriesPage() {
       words: paragraph.split(/\s+/).filter(word => word.length > 0).length
     }));
   }, []);
-  
-  // Custom setter for selected story that also caches the selection and splits into parts
+
+  // Custom setter for selected story that also caches 
   const setSelectedStoryWithCache = useCallback((story: Story) => {
     setSelectedStory(story);
-    // Split story into parts
+    localStorage.setItem("selectedStoryId", story.id);
+    
+    // Split the story into parts
     const parts = splitStoryIntoParts(story.content);
     setStoryParts(parts);
-    setSelectedPartIndex(0); // Reset to first part
-    
-    // Save to localStorage
-    try {
-      localStorage.setItem("selectedStoryId", story.id);
-      localStorage.setItem("selectedPartIndex", "0"); // Reset part index
-    } catch (error) {
-      console.error("Error saving selected story:", error);
-    }
+    setSelectedPartIndex(0);
   }, [splitStoryIntoParts]);
-  const [userSpeech, setUserSpeech] = useState("");
-  const [missedWords, setMissedWords] = useState<string[]>([]);
-  const [matchedWords, setMatchedWords] = useState<WordMatch[]>([]);
-  const [accuracy, setAccuracy] = useState(0);
-  const [readingAttempts, setReadingAttempts] = useState<ReadingAttempt[]>([]);
-  const [showResults, setShowResults] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isStoryDialogOpen, setIsStoryDialogOpen] = useState(false);
 
-  // Refs for managing speech recognition
-  const recognitionRef = useRef<any>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const storyContentRef = useRef<HTMLDivElement>(null);
-  const startTimeRef = useRef<number>(0);
+  // Fetch stories from API
+  const fetchStories = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/stories');
+      if (!response.ok) {
+        throw new Error('Failed to fetch stories');
+      }
+      const data = await response.json();
+      setStories([...data, ...STORIES]);
+      return data;
+    } catch (error) {
+      console.error('Error fetching stories:', error);
+      setError('Failed to load stories. Please try again later.');
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  // Speech synthesis for reading the story
-  const { speak, stop } = useSpeechSynthesis();
+  // Load reading attempts
+  const loadReadingAttempts = useCallback(() => {
+    try {
+      const savedAttempts = localStorage.getItem("readingAttempts");
+      if (savedAttempts) {
+        const parsed: ReadingAttempt[] = JSON.parse(savedAttempts);
+        setReadingAttempts(parsed);
+      }
+    } catch (error) {
+      console.error("Error loading reading attempts:", error);
+    }
+  }, []);
 
+  // Load selected story and part
+  const loadSelectedStory = useCallback(async () => {
+    try {
+      const storiesData = await fetchStories();
+      
+      const savedStoryId = localStorage.getItem("selectedStoryId");
+      if (savedStoryId) {
+        const story = storiesData.find((s: Story) => s.id === savedStoryId);
+        if (story) {
+          setSelectedStoryWithCache(story);
+        }
+      } else {
+        // Default story initialization
+        if (storiesData.length > 0) {
+          setSelectedStoryWithCache(storiesData[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading selected story:", error);
+    }
+  }, [fetchStories, setSelectedStoryWithCache]);
+  
   // Load reading attempts and selected story from localStorage
   useEffect(() => {
-    // Load reading attempts
-    const loadAttempts = () => {
-      try {
-        const savedAttempts = localStorage.getItem("readingAttempts");
-        if (savedAttempts) {
-          const parsed: ReadingAttempt[] = JSON.parse(savedAttempts);
-          setReadingAttempts(parsed);
-        }
-      } catch (error) {
-        console.error("Error loading reading attempts:", error);
-      }
-    };
-
-    // Load selected story and part
-    const loadSelectedStory = () => {
-      try {
-        const savedStoryId = localStorage.getItem("selectedStoryId");
-        if (savedStoryId) {
-          const story = STORIES.find(s => s.id === savedStoryId);
-          if (story) {
-            setSelectedStory(story);
-            
-            // Split the story into parts
-            const parts = splitStoryIntoParts(story.content);
-            setStoryParts(parts);
-            
-            // Load selected part index
-            const savedPartIndex = localStorage.getItem("selectedPartIndex");
-            if (savedPartIndex) {
-              const partIndex = parseInt(savedPartIndex, 10);
-              if (!isNaN(partIndex) && partIndex >= 0 && partIndex < parts.length) {
-                setSelectedPartIndex(partIndex);
-              }
-            }
-          }
-        } else {
-          // Default story initialization
-          const parts = splitStoryIntoParts(selectedStory.content);
-          setStoryParts(parts);
-        }
-      } catch (error) {
-        console.error("Error loading selected story:", error);
-      }
-    };
-
-    loadAttempts();
+    loadReadingAttempts();
     loadSelectedStory();
-  }, [selectedStory.content, splitStoryIntoParts]);
-  
+    // We don't need to call fetchStories() explicitly here as it's already called in loadSelectedStory()
+  }, [loadReadingAttempts, loadSelectedStory]);
+
   // Function to clear reading history
   const clearReadingHistory = useCallback(() => {
     // Clear localStorage
@@ -319,7 +335,7 @@ export default function StoriesPage() {
 
       // Save reading attempt
       saveReadingAttempt({
-        storyId: selectedStory.id,
+        storyId: selectedStory?.id || "",
         date: Date.now(),
         accuracy: finalResults.accuracy,
         duration,
@@ -329,7 +345,7 @@ export default function StoriesPage() {
 
       setShowResults(true);
     }
-  }, [userSpeech, selectedStory.id]);
+  }, [userSpeech, selectedStory?.id]);
 
   // Process speech for word matching
   const processSpeech = useCallback(
@@ -438,9 +454,9 @@ export default function StoriesPage() {
   // Play the selected story part using text-to-speech
   const playStory = useCallback(() => {
     setIsReading(true);
-    const contentToRead = storyParts.length > 0 ? storyParts[selectedPartIndex].content : selectedStory.content;
+    const contentToRead = storyParts.length > 0 ? storyParts[selectedPartIndex].content : selectedStory?.content || "";
     speak(contentToRead, false);
-  }, [selectedPartIndex, selectedStory.content, speak, storyParts]);
+  }, [selectedPartIndex, selectedStory?.content, speak, storyParts]);
 
   // Stop playback
   const stopPlayback = useCallback(() => {
@@ -451,7 +467,7 @@ export default function StoriesPage() {
   // Generate highlighted text with matched and missed words
   const getHighlightedText = useCallback(() => {
     if (!showResults || !selectedStory || storyParts.length === 0) 
-      return selectedStory.content;
+      return selectedStory?.content || "";
       
     const contentToHighlight = storyParts[selectedPartIndex].content;
 
@@ -513,6 +529,70 @@ export default function StoriesPage() {
     setError(null);
   }, []);
 
+  // Handle adding a new story
+  const handleAddStory = async () => {
+    // Validate form
+    if (!newStory.title || !newStory.content) {
+      setSubmitMessage({ type: 'error', text: 'Please fill in all required fields' });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSubmitMessage(null);
+    
+    try {
+      // Create a complete story object
+      const storyToAdd: Story = {
+        id: newStory.id || `story-${Date.now()}`,
+        title: newStory.title,
+        content: newStory.content,
+        difficulty: newStory.difficulty || 'beginner',
+        words: newStory.content.split(/\s+/).filter(word => word.length > 0).length
+      };
+      
+      // Send to API
+      const response = await fetch('/api/stories/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ story: storyToAdd })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Success - add to local stories and select it
+        setStories(prevStories => [...prevStories, storyToAdd]);
+        setSelectedStoryWithCache(storyToAdd);
+        
+        // Reset form
+        setNewStory({ 
+          id: `story-${Date.now()}`, 
+          title: "", 
+          content: "", 
+          difficulty: "beginner" 
+        });
+        
+        setSubmitMessage({ type: 'success', text: 'Story added successfully!' });
+        
+        // Close dialog after a delay
+        setTimeout(() => {
+          setIsAddStoryDialogOpen(false);
+          setSubmitMessage(null);
+        }, 1500);
+      } else {
+        // Error
+        setSubmitMessage({ type: 'error', text: data.error || 'Failed to add story' });
+      }
+    } catch (error) {
+      console.error('Error adding story:', error);
+      setSubmitMessage({ type: 'error', text: 'An error occurred while adding the story' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <ProtectedRoute>
       <div className="container min-h-screen p-4 max-w-4xl mx-auto">
@@ -530,29 +610,37 @@ export default function StoriesPage() {
             <div className="mb-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-medium">Current Story</h2>
-                <button
-                  onClick={() => {
-                    if (!isListening && !isReading) {
-                      setIsStoryDialogOpen(true);
-                    }
-                  }}
-                  className={`px-4 py-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors ${isListening || isReading ? "opacity-50 cursor-not-allowed" : ""}`}
-                  disabled={isListening || isReading}
-                >
-                  Change Story
-                </button>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setIsAddStoryDialogOpen(true)}
+                    className="px-4 py-2 bg-green-50 text-green-600 rounded-md border border-green-200 hover:bg-green-100 transition-colors"
+                  >
+                    Add Story
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!isListening && !isReading) {
+                        setIsStoryDialogOpen(true);
+                      }
+                    }}
+                    className={`px-4 py-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors ${isListening || isReading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={isListening || isReading}
+                  >
+                    Change Story
+                  </button>
+                </div>
               </div>
               
               {/* Current story card */}
               <div className="p-4 border rounded-lg border-blue-500 bg-blue-50">
-                <h3 className="font-medium text-lg">{selectedStory.title}</h3>
+                <h3 className="font-medium text-lg">{selectedStory?.title}</h3>
                 <div className="flex justify-between mt-2">
                   <span
-                    className={`px-2 py-0.5 rounded ${selectedStory.difficulty === "beginner" ? "bg-green-100 text-green-800" : selectedStory.difficulty === "intermediate" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
+                    className={`px-2 py-0.5 rounded ${selectedStory?.difficulty === "beginner" ? "bg-green-100 text-green-800" : selectedStory?.difficulty === "intermediate" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
                   >
-                    {selectedStory.difficulty}
+                    {selectedStory?.difficulty}
                   </span>
-                  <span className="text-gray-500">{selectedStory.words} words</span>
+                  <span className="text-gray-500">{selectedStory?.words} words</span>
                 </div>
                 
                 {/* Story parts navigation */}
@@ -616,28 +704,120 @@ export default function StoriesPage() {
               }
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
-                {STORIES.map((story) => (
-                  <div
-                    key={story.id}
-                    onClick={() => {
-                      setSelectedStoryWithCache(story);
-                      resetReading();
-                      setIsStoryDialogOpen(false);
-                    }}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedStory.id === story.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
-                  >
-                    <h3 className="font-medium">{story.title}</h3>
-                    <div className="flex justify-between mt-2 text-sm">
-                      <span
-                        className={`px-2 py-0.5 rounded ${story.difficulty === "beginner" ? "bg-green-100 text-green-800" : story.difficulty === "intermediate" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
-                      >
-                        {story.difficulty}
-                      </span>
-                      <span className="text-gray-500">{story.words} words</span>
-                    </div>
+                {isLoading ? (
+                  <div className="flex justify-center items-center py-6">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                   </div>
-                ))}
+                ) : (
+                  stories.map((story) => (
+                    <div
+                      key={story.id}
+                      onClick={() => {
+                        setSelectedStoryWithCache(story);
+                        resetReading();
+                        setIsStoryDialogOpen(false);
+                      }}
+                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedStory?.id === story.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
+                    >
+                      <h3 className="font-medium">{story.title}</h3>
+                      <div className="flex justify-between mt-2 text-sm">
+                        <span
+                          className={`px-2 py-0.5 rounded ${story.difficulty === "beginner" ? "bg-green-100 text-green-800" : story.difficulty === "intermediate" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
+                        >
+                          {story.difficulty}
+                        </span>
+                        <span className="text-gray-500">{story.words} words</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
+            </Dialog>
+            
+            {/* Add Story Dialog */}
+            <Dialog
+              isOpen={isAddStoryDialogOpen}
+              onClose={() => setIsAddStoryDialogOpen(false)}
+              title="Add New Story"
+              maxWidth="max-w-2xl"
+              footer={
+                <div className="flex justify-between w-full">
+                  <div>
+                    {submitMessage && (
+                      <div className={`text-sm ${submitMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                        {submitMessage.text}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setIsAddStoryDialogOpen(false)}
+                      className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddStory}
+                      disabled={isSubmitting || !newStory.title || !newStory.content}
+                      className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${(isSubmitting || !newStory.title || !newStory.content) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save Story'}
+                    </button>
+                  </div>
+                </div>
+              }
+            >
+              <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleAddStory(); }}>
+                <div>
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    id="title"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={newStory.title}
+                    onChange={(e) => setNewStory({...newStory, title: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="difficulty" className="block text-sm font-medium text-gray-700 mb-1">
+                    Difficulty
+                  </label>
+                  <select
+                    id="difficulty"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={newStory.difficulty}
+                    onChange={(e) => setNewStory({...newStory, difficulty: e.target.value as "beginner" | "intermediate" | "advanced"})}
+                  >
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
+                    Content
+                  </label>
+                  <textarea
+                    id="content"
+                    rows={10}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={newStory.content}
+                    onChange={(e) => setNewStory({...newStory, content: e.target.value})}
+                    placeholder="Enter your story text here. Use blank lines to separate paragraphs."
+                    required
+                  />
+                </div>
+                
+                <div className="text-sm text-gray-500">
+                  <p>Word count: {newStory.content?.split(/\s+/).filter(word => word.length > 0).length || 0} words</p>
+                  <p>Paragraphs: {newStory.content?.split(/\n\s*\n/).filter(p => p.trim().length > 0).length || 0}</p>
+                </div>
+              </form>
             </Dialog>
 
             {/* Reading controls */}
@@ -691,8 +871,14 @@ export default function StoriesPage() {
 
             {/* Error message */}
             {error && (
-              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
+              <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md">
                 {error}
+                <button 
+                  onClick={fetchStories}
+                  className="ml-2 underline text-blue-600 hover:text-blue-800"
+                >
+                  Try Again
+                </button>
               </div>
             )}
 
@@ -744,7 +930,7 @@ export default function StoriesPage() {
             <div className="relative">
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-lg font-medium">
-                  {selectedStory.title} {storyParts.length > 1 && <span className="text-sm font-normal text-gray-500">- Part {selectedPartIndex + 1}</span>}
+                  {selectedStory?.title} {storyParts.length > 1 && <span className="text-sm font-normal text-gray-500">- Part {selectedPartIndex + 1}</span>}
                 </h3>
                 
                 {storyParts.length > 0 && (
@@ -793,7 +979,7 @@ export default function StoriesPage() {
                       </p>
                     ))
                   ) : (
-                    selectedStory.content.split("\n").map((line, lineIndex) => (
+                    selectedStory?.content.split("\n").map((line, lineIndex) => (
                       <p key={lineIndex} className="mb-2">
                         {line.split(" ").map((word, wordIndex) => (
                           <span
