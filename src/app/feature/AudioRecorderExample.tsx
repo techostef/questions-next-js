@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import Button from '@/components/Button';
 
@@ -14,6 +13,7 @@ export default function AudioRecorderExample({
   onRecordingComplete,
   onTranscriptReceived
 }: AudioRecorderExampleProps) {
+  // Track transcript text
   const [transcript, setTranscript] = useState('');
   
   const {
@@ -23,57 +23,61 @@ export default function AudioRecorderExample({
     startRecording,
     stopRecording,
     cancelRecording,
+    clearRecording,
     audioBlob,
-    clearRecording
+    audioUrl
   } = useAudioRecorder({
-    maxDuration: 60000, // 60 seconds
-    minDuration: 3000,  // 3 seconds
-    audioBitsPerSecond: 128000
+    // Set a shorter minimum duration for testing
+    minDuration: 500
   });
 
-  // Process the recording after it's complete
-  const processRecording = useCallback(async () => {
-    if (!audioBlob) return;
-    
-    try {
-      // Create form data for API request
-      const formData = new FormData();
-      formData.append("audio", audioBlob, "recording.webm");
-
-      // Send to API endpoint
-      const response = await fetch("/api/audio/transcript", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to process audio");
-      }
-
-      const data = await response.json();
-      setTranscript(data.transcript);
-      
-      // Call the callback if provided
-      if (onTranscriptReceived) {
-        onTranscriptReceived(data.transcript);
-      }
-      
-    } catch (err: any) {
-      console.error("Error processing audio:", err);
-    }
-  }, [audioBlob, onTranscriptReceived]);
-
-  // When recording stops and we have a blob, process it
+  // Process audio when recording is complete
   useEffect(() => {
-    if (audioBlob && !isRecording && !isProcessing) {
-      processRecording();
-      
-      // Call the callback if provided
-      if (onRecordingComplete) {
-        onRecordingComplete(audioBlob);
+    const processAudio = async () => {
+      if (audioBlob && !isRecording && !isProcessing) {
+        console.log('Processing audio blob:', audioBlob.size, 'bytes');
+        
+        try {
+          // Create form data for sending to API
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+          
+          // Send to our transcription API
+          const response = await fetch('/api/audio/transcribe', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Server responded with ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('Transcription received:', data);
+          
+          // Update transcript state
+          if (data.text) {
+            setTranscript(data.text);
+            
+            // Call the callback with the transcript if provided
+            if (onTranscriptReceived) {
+              onTranscriptReceived(data.text);
+            }
+          }
+          
+          // Call the recording complete callback if provided
+          if (onRecordingComplete) {
+            onRecordingComplete(audioBlob);
+          }
+        } catch (err) {
+          console.error('Error processing audio:', err);
+        }
       }
-    }
-  }, [audioBlob, isRecording, isProcessing, processRecording, onRecordingComplete]);
+    };
+    
+    processAudio();
+  }, [audioBlob, isRecording, isProcessing, audioUrl, onRecordingComplete, onTranscriptReceived]);
+
 
   return (
     <div className="p-4 border rounded-lg space-y-4">
@@ -131,14 +135,12 @@ export default function AudioRecorderExample({
         </div>
       )}
       
-      {audioBlob && !isRecording && !isProcessing && (
+      {audioBlob && audioUrl && (
         <div className="mt-4">
-          <h4 className="font-medium">Recorded Audio:</h4>
-          <audio 
-            controls 
-            src={URL.createObjectURL(audioBlob)} 
-            className="w-full mt-2"
-          />
+          <h3 className="text-lg font-medium">Recording Complete</h3>
+          <p>Audio size: {audioBlob.size} bytes</p>
+          <p>Audio type: {audioBlob.type}</p>
+          <audio className="mt-2" controls src={audioUrl} />
         </div>
       )}
       

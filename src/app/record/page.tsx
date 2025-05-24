@@ -1,7 +1,7 @@
 
 "use client";
 
-import Component from '@/app/feature/AudioRecorderExample';
+import Component from '@/app/feature/BasicRecorderExample';
 
 export default function RecordPage() {
   return (

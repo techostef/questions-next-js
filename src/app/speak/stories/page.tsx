@@ -5,9 +5,10 @@ import Navigation from "@/components/Navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import TabNavigation from "@/components/TabNavigation";
 import { Sound } from "@/assets/sound";
-import { Mic } from "@/assets/mic";
+// Mic component is now used in StoryReader
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+// No longer using speech recognition directly - now using StoryReader component
+import StoryReader from '@/app/feature/StoryReader';
 import Dialog from "@/components/Dialog";
 import { TABS } from "../constants";
 import { STORIES } from "./mockData";
@@ -194,7 +195,7 @@ export default function StoriesPage() {
   const [componentError, setComponentError] = useState<string | null>(null);
   const [isStoryDialogOpen, setIsStoryDialogOpen] = useState(false);
   const [isAddStoryDialogOpen, setIsAddStoryDialogOpen] = useState(false);
-  const [isLoading] = useState(true);
+  const [isLoading] = useState(false);
   const [newStory, setNewStory] = useState<Partial<Story>>({ 
     id: `story-${Date.now()}`, 
     title: "", 
@@ -204,36 +205,18 @@ export default function StoriesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
-  // Refs for managing audio recording
-  const audioChunksRef = useRef<Blob[]>([]);
+    // Story content ref for scrolling
   const storyContentRef = useRef<HTMLDivElement>(null);
-  const startTimeRef = useRef<number>(0);
-
+  
   // Speech synthesis for reading the story
   const { speak, stop } = useSpeechSynthesis();
   
-  // Speech recognition for listening to the user
-  const { 
-    transcript, 
-    isListening,
-    isSupported, 
-    startListening, 
-    stopListening, 
-    clearTranscript,
-    error: speechRecognitionError
-  } = useSpeechRecognition({
-    silenceTimeout: 0,
-    language: 'en-US',
-    continuous: true,
-    interimResults: true
-  });
+  // Define state to track recording status (replaced speech recognition)
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSupported] = useState(true); // Assume supported by default
   
-  // Update component error state when speech recognition error changes
-  useEffect(() => {
-    if (speechRecognitionError) {
-      setComponentError(`Speech recognition error: ${speechRecognitionError}`);
-    }
-  }, [speechRecognitionError]);
+  // Listen for errors from the StoryReader component
+  // The StoryReader component will handle its own errors internally
 
   // Function to split story content into parts (paragraphs)
   const splitStoryIntoParts = useCallback((content: string) => {
@@ -262,17 +245,6 @@ export default function StoriesPage() {
     const testText = `yesterday I had an interview with a team based in the Philippines initially I thought I was rejected because they are probably left the meeting without notifying me but the letter emailed me to reschedule`;
     
     const mistakes = findMistakes(originalText, testText);
-    
-    mistakes.forEach(mistake => {
-      console.log(`- "${mistake.word}" (${mistake.type}${mistake.replacement ? ', replaced with "' + mistake.replacement + '"' : ''})`);
-      console.log(`  Context: "...${mistake.context}..."`);
-    });
-    
-    // Filter for specific words like "abruptly"
-    const abruptlyMistake = mistakes.find(m => m.word === "abruptly");
-    if (abruptlyMistake) {
-      console.log("\nFound 'abruptly' missing:", abruptlyMistake);
-    }
     
     return mistakes;
   };
@@ -443,14 +415,7 @@ export default function StoriesPage() {
     [selectedStory, storyParts, selectedPartIndex]
   );
   
-  // Update userSpeech when transcript changes
-  useEffect(() => {
-    if (transcript) {
-      setUserSpeech(transcript);
-      // Process speech in real-time to provide feedback
-      processSpeech(transcript);
-    }
-  }, [transcript, processSpeech]);
+  // This is now handled by the StoryReader component's onTranscriptReceived callback
 
   // Function to clear reading history
   const clearReadingHistory = useCallback(() => {
@@ -466,28 +431,15 @@ export default function StoriesPage() {
     setMissedWords([]);
     setMatchedWords([]);
     setComponentError(null);
-    clearTranscript();
-  }, [clearTranscript]);
+    // No need to clear transcript anymore - handled by StoryReader
+  }, []);
 
-  // Begin the reading practice session
-  const beginReadingSession = useCallback(() => {
-    try {
-      // Reset state
-      resetRecognitionState();
-      setShowResults(false);
-      audioChunksRef.current = [];
-      startTimeRef.current = Date.now();
-
-      // Start speech recognition
-      startListening();
-    } catch (error) {
-      console.error("Error starting reading session:", error);
-      setComponentError("Failed to start reading session. Please try again.");
-    }
-  }, [resetRecognitionState, startListening]);
+  // This function was previously used for starting speech recognition sessions
+  // Now we're using the StoryReader component directly, but keeping this
+  // as it might be needed for backward compatibility or future use
 
   // Process final results
-  const processResults = useCallback(() => {
+  const processResults = useCallback((userSpeech: string) => {
     if (userSpeech.trim().length > 0) {
       // Get accuracy based on missed words
       const finalResults = processSpeech(userSpeech);
@@ -509,22 +461,19 @@ export default function StoriesPage() {
 
       setShowResults(true);
     }
-  }, [userSpeech, selectedStory?.id, processSpeech, saveReadingAttempt, matchedWords, missedWords]);
+  }, [selectedStory?.id, processSpeech, saveReadingAttempt, matchedWords, missedWords]);
 
+  
   useEffect(() => {
-    if (!isListening && transcript) {
-      processResults();
+    if (userSpeech.trim().length > 0) {
+      processResults(userSpeech);
     }
-  }, [isListening, transcript, processResults]);
+  }, [userSpeech]);
 
-  // End the reading practice session
-  const endReadingSession = useCallback(() => {
-    // Stop speech recognition using the hook
-    stopListening();
+  // No longer needed - StoryReader handles this
 
-    // Process final results
-    processResults();
-  }, [processResults, stopListening]);
+  // This function was previously used to stop speech recognition
+  // Keeping it defined but unused for now as we transition to the new recording method
 
   // Set the selected part index and save to localStorage
   const setPartIndexWithCache = useCallback((index: number) => {
@@ -599,15 +548,6 @@ export default function StoriesPage() {
       .join("");
   }, [selectedStory, missedWords, showResults, userSpeech, storyParts, selectedPartIndex]);
 
-  // Toggle the reading practice mode
-  const toggleReading = useCallback(() => {
-    if (isListening) {
-      endReadingSession();
-    } else {
-      beginReadingSession();
-    }
-  }, [isListening, beginReadingSession, endReadingSession]);
-
   // Reset the reading practice
   const resetReading = useCallback(() => {
     resetRecognitionState();
@@ -679,8 +619,6 @@ export default function StoriesPage() {
     }
   };
 
-  console.log("render")
-
   return (
     <ProtectedRoute>
       <div className="container min-h-screen p-4 max-w-4xl mx-auto">
@@ -707,12 +645,12 @@ export default function StoriesPage() {
                   </button>
                   <button
                     onClick={() => {
-                      if (!isListening && !isReading) {
+                      if (!isRecording && !isReading) {
                         setIsStoryDialogOpen(true);
                       }
                     }}
-                    className={`px-4 py-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors ${isListening || isReading ? "opacity-50 cursor-not-allowed" : ""}`}
-                    disabled={isListening || isReading}
+                    className={`px-4 py-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors ${isRecording || isReading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    disabled={isRecording || isReading}
                   >
                     Change Story
                   </button>
@@ -742,8 +680,8 @@ export default function StoriesPage() {
                     <div className="flex justify-between items-center">
                       <button
                         onClick={() => setPartIndexWithCache(selectedPartIndex - 1)}
-                        disabled={selectedPartIndex === 0 || isListening || isReading}
-                        className={`px-2 py-1 rounded ${selectedPartIndex === 0 || isListening || isReading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                        disabled={selectedPartIndex === 0 || isRecording || isReading}
+                        className={`px-2 py-1 rounded ${selectedPartIndex === 0 || isRecording || isReading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
                       >
                         ← Previous
                       </button>
@@ -753,8 +691,8 @@ export default function StoriesPage() {
                           <button
                             key={index}
                             onClick={() => setPartIndexWithCache(index)}
-                            disabled={isListening || isReading}
-                            className={`w-6 h-6 rounded-full text-xs flex items-center justify-center ${selectedPartIndex === index ? 'bg-blue-500 text-white' : isListening || isReading ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                            disabled={isRecording || isReading}
+                            className={`w-6 h-6 rounded-full text-xs flex items-center justify-center ${selectedPartIndex === index ? 'bg-blue-500 text-white' : isRecording || isReading ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
                           >
                             {index + 1}
                           </button>
@@ -763,8 +701,8 @@ export default function StoriesPage() {
                       
                       <button
                         onClick={() => setPartIndexWithCache(selectedPartIndex + 1)}
-                        disabled={selectedPartIndex === storyParts.length - 1 || isListening || isReading}
-                        className={`px-2 py-1 rounded ${selectedPartIndex === storyParts.length - 1 || isListening || isReading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                        disabled={selectedPartIndex === storyParts.length - 1 || isRecording || isReading}
+                        className={`px-2 py-1 rounded ${selectedPartIndex === storyParts.length - 1 || isRecording || isReading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
                       >
                         Next →
                       </button>
@@ -912,9 +850,9 @@ export default function StoriesPage() {
             <div className="mb-4 flex flex-wrap gap-3 justify-center">
               <button
                 onClick={playStory}
-                disabled={isListening || isReading}
+                disabled={isRecording || isReading}
                 className={`flex items-center px-4 py-2 bg-green-500 text-white rounded-lg transition-colors ${
-                  isListening || isReading
+                  isRecording || isReading
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:bg-green-600"
                 }`}
@@ -923,20 +861,18 @@ export default function StoriesPage() {
                 <span className="ml-2">Listen to Story</span>
               </button>
 
-              <button
-                onClick={toggleReading}
-                disabled={isReading || !isSupported}
-                className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-                  isListening
-                    ? "bg-red-500 hover:bg-red-600 text-white"
-                    : "bg-blue-500 hover:bg-blue-600 text-white"
-                } ${(isReading || !isSupported) ? "opacity-50 cursor-not-allowed" : ""}`}
-              >
-                <Mic isListening={isListening} />
-                <span className="ml-2">
-                  {isListening ? "Stop Reading" : "Start Reading"}
-                </span>
-              </button>
+              <StoryReader 
+                storyText={selectedStory?.content || ''}
+                onTranscriptReceived={(transcript) => {
+                  setUserSpeech(transcript);
+                  setIsRecording(false);
+                }}
+                onRecordingStateChange={(isRecording) => {
+                  setIsRecording(isRecording);
+                }}
+                isReading={isReading}
+                disabled={!isSupported}
+              />
 
               {isReading && (
                 <button
@@ -1030,11 +966,11 @@ export default function StoriesPage() {
                 )}
               </div>
 
-              {isListening && (
+              {isRecording && (
                 <div className="absolute right-0 top-0">
                   <div className="animate-pulse flex items-center">
                     <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                    <span className="text-sm font-medium">Listening...</span>
+                    <span className="text-sm font-medium">Recording...</span>
                   </div>
                 </div>
               )}
@@ -1042,7 +978,7 @@ export default function StoriesPage() {
               <div
                 ref={storyContentRef}
                 className={`prose max-w-none p-4 bg-gray-50 rounded-lg overflow-y-auto ${
-                  isListening ? "border-2 border-blue-500" : ""
+                  isRecording ? "border-2 border-blue-500" : ""
                 }`}
                 style={{
                   maxHeight: "400px",
@@ -1094,9 +1030,9 @@ export default function StoriesPage() {
               <div className="text-gray-700">
                 {userSpeech ? userSpeech : "No speech detected yet"}
               </div>
-              {isListening && (
+              {isRecording && (
                 <div className="mt-2 text-xs text-blue-600 animate-pulse">
-                  Listening active...
+                  Recording active...
                 </div>
               )}
             </div>
