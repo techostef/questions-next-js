@@ -570,18 +570,31 @@ export default function StoriesPage() {
                 {showResults ? (
                   <div dangerouslySetInnerHTML={{ __html: getHighlightedText() }} />
                 ) : (
-                  selectedStory.content
+                  selectedStory.content.split('\n').map((line, lineIndex) => (
+                    <p key={lineIndex} className="mb-2">
+                      {line.split(' ').map((word, wordIndex) => (
+                        <span key={`${lineIndex}-${wordIndex}`} className="inline-block mr-1">
+                          {word}
+                        </span>
+                      ))}
+                    </p>
+                  ))
                 )}
               </div>
             </div>
 
             {/* User speech output for debugging */}
-            {isListening && userSpeech && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <h4 className="text-sm font-medium mb-1">What you&apos;re saying:</h4>
-                <div className="text-gray-700">{userSpeech}</div>
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <h4 className="text-sm font-medium mb-1">Voice-to-Text Debug Output:</h4>
+              <div className="text-gray-700">
+                {userSpeech ? userSpeech : "No speech detected yet"}
               </div>
-            )}
+              {isListening && (
+                <div className="mt-2 text-xs text-blue-600 animate-pulse">
+                  Listening active...
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Reading history */}

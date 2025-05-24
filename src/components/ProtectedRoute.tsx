@@ -1,18 +1,19 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
-  const router = useRouter();
+  const { push } = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/');
+      push(`/?path=${pathname}`);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, pathname, push]);
 
   // Show nothing while checking authentication
   if (!isAuthenticated) {

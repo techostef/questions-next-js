@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
@@ -10,13 +10,19 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const { login, isAuthenticated } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Handle redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/quiz');
+      const path = searchParams.get('path')
+      if (path) {
+        router.push(path);
+      } else {
+        router.push('/quiz');
+      }
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
