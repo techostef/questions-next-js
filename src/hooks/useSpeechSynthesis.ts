@@ -90,9 +90,13 @@ export function useSpeechSynthesis() {
   // Referenced to track if we're currently speaking
   const isSpeakingRef = useRef(false);
   const chunksToSpeakRef = useRef<string[]>([]);
+  // Track when speech is intentionally stopped
+  const isIntentionallyStopped = useRef(false);
 
   // Speech synthesis function
   const speak = useCallback((text: string, isSSML: boolean = false) => {
+    // Reset the intentionally stopped flag when starting new speech
+    isIntentionallyStopped.current = false;
     if (typeof window === "undefined") return;
     
     // Check if speech synthesis is supported
@@ -170,9 +174,11 @@ export function useSpeechSynthesis() {
           setTimeout(speakNextChunk, DELAY_BETWEEN_CHUNKS); // Small delay between chunks
         };
         
-        utterance.onerror = (event) => {
-          console.error('Speech synthesis error:', event);
-          setTimeout(speakNextChunk, DELAY_BETWEEN_CHUNKS); // Try next chunk even if this one fails
+        utterance.onerror = () => {
+          // Only continue to the next chunk if we haven't intentionally stopped
+          if (!isIntentionallyStopped.current) {
+            setTimeout(speakNextChunk, DELAY_BETWEEN_CHUNKS); // Try next chunk only if not stopped
+          }
         };
 
         // Find the appropriate voice based on user preference
@@ -218,7 +224,14 @@ export function useSpeechSynthesis() {
     if (!("speechSynthesis" in window)) return;
     
     try {
+      // Mark that we're intentionally stopping
+      isIntentionallyStopped.current = true;
+      // Clear any remaining chunks
+      chunksToSpeakRef.current = [];
+      // Cancel current speech
       window.speechSynthesis.cancel();
+      // Reset speaking state
+      isSpeakingRef.current = false;
     } catch (error) {
       console.error("Error stopping speech:", error);
     }

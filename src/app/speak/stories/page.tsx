@@ -9,6 +9,7 @@ import { Sound } from "@/assets/sound";
 import { Mic } from "@/assets/mic";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import { TABS } from "../constants";
+import { STORIES } from "./mockData";
 
 // Add type definition for SpeechRecognition
 declare global {
@@ -18,11 +19,11 @@ declare global {
   }
 }
 
-interface Story {
+export interface Story {
   id: string;
   title: string;
   content: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  difficulty: "beginner" | "intermediate" | "advanced";
   words: number;
 }
 
@@ -42,47 +43,6 @@ interface ReadingAttempt {
   matchedWords: WordMatch[];
 }
 
-// Mock stories for practice
-const STORIES: Story[] = [
-  {
-    id: 'story-1',
-    title: 'The Determined Developer',
-    content: `Once upon a time in a bustling tech hub, there lived a young developer named Maya. Every morning, she arrived at her tiny corner desk with a steaming cup of coffee and a heart full of ideas. Her dream was to create an app that would help people learn new languages through short, daily stories—just like the one you're reading now.
-
-One afternoon, after weeks of coding, Maya finally released the first version of her app. Excited users flooded in, but not long after, bug reports began to pour in. Some stories failed to load, buttons didn't respond, and worst of all, the progress tracker reset itself at random. Maya felt her excitement fade into frustration.
-
-Instead of giving up, she took a deep breath and wrote down each bug report. She prioritized them: "Failed loads" at the top, "unresponsive buttons" next, and "tracker resets" after that. Day by day, she tackled one issue at a time. She added logging to find where the app crashed, rewrote the button-handling code to be more robust, and fixed the logic in the tracker so it stored progress reliably.
-
-A week later, Maya rolled out an update—and this time, everything worked flawlessly. Users praised the smooth experience and shared stories of how they were finally keeping up with their language goals. Maya watched the download numbers climb and felt a surge of pride. She realized that perseverance, careful planning, and steady effort could turn frustration into success.
-
-And so, Maya's app became a favorite among language learners everywhere, all because she refused to let setbacks stop her. The end.`,
-    difficulty: 'intermediate',
-    words: 255
-  },
-  {
-    id: 'story-2',
-    title: 'The First Day',
-    content: `It was Sarah's first day at her new job. She woke up early and prepared a healthy breakfast. She was excited but also nervous. The office was in a tall building downtown. 
-
-She arrived fifteen minutes early and took the elevator to the tenth floor. Her new boss greeted her with a warm smile and showed her to her desk. Everyone was friendly and helpful. 
-
-By lunchtime, Sarah had already learned many new things. She felt happy about her decision to take this job. At the end of the day, she was tired but satisfied. She knew tomorrow would be even better.`,
-    difficulty: 'beginner',
-    words: 98
-  },
-  {
-    id: 'story-3',
-    title: 'The Quantum Paradox',
-    content: `Professor Elena Nakamura scrutinized the quantum readings fluctuating across her holographic display. The entanglement pattern exhibited unprecedented stability despite the gravitational interference from the nearby neutron star. Her groundbreaking experiment—combining quantum teleportation with relativistic frame-dragging—was yielding results that contradicted three established laws of physics simultaneously.
-
-"The paradox suggests a fundamental misunderstanding in our model of quantum gravity," she explained to her bewildered graduate students. "The non-locality principle isn't being violated; rather, it's operating within a higher-dimensional framework that our instruments are only now capable of detecting."
-
-Elena's colleagues at CERN and the Perimeter Institute had initially dismissed her theoretical framework as mathematically elegant but experimentally unfeasible. Now, as her quantum processor maintained coherence at temperatures approaching 80 Kelvin—far above the predicted thermal decoherence threshold—the scientific community would have to reconsider the very foundations of quantum mechanics.`,
-    difficulty: 'advanced',
-    words: 143
-  }
-];
-
 export default function StoriesPage() {
   // State for stories and reading practice
   const [selectedStory, setSelectedStory] = useState<Story>(STORIES[0]);
@@ -95,14 +55,14 @@ export default function StoriesPage() {
   const [readingAttempts, setReadingAttempts] = useState<ReadingAttempt[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Refs for managing speech recognition
   const recognitionRef = useRef<any>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const storyContentRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<number>(0);
-  
+
   // Speech synthesis for reading the story
   const { speak, stop } = useSpeechSynthesis();
 
@@ -122,21 +82,32 @@ export default function StoriesPage() {
 
     loadAttempts();
   }, []);
+  
+  // Function to clear reading history
+  const clearReadingHistory = useCallback(() => {
+    // Clear localStorage
+    localStorage.removeItem("readingAttempts");
+    // Clear state
+    setReadingAttempts([]);
+  }, []);
 
   // Initialize speech recognition
   const initSpeechRecognition = useCallback(() => {
     try {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+
       if (!SpeechRecognition) {
-        setError("Your browser doesn't support speech recognition. Try using Chrome.");
+        setError(
+          "Your browser doesn't support speech recognition. Try using Chrome."
+        );
         return false;
       }
 
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      recognition.lang = "en-US";
 
       recognition.onstart = () => {
         setIsListening(true);
@@ -173,7 +144,9 @@ export default function StoriesPage() {
       return true;
     } catch (error) {
       console.error("Error initializing speech recognition:", error);
-      setError("Failed to initialize speech recognition. Please try a different browser.");
+      setError(
+        "Failed to initialize speech recognition. Please try a different browser."
+      );
       return false;
     }
   }, [isListening]);
@@ -197,11 +170,12 @@ export default function StoriesPage() {
       startTimeRef.current = Date.now();
 
       // Start recording audio
-      navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
+      navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .then((stream) => {
           const mediaRecorder = new MediaRecorder(stream);
           mediaRecorderRef.current = mediaRecorder;
-          
+
           mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
               audioChunksRef.current.push(event.data);
@@ -210,9 +184,11 @@ export default function StoriesPage() {
 
           mediaRecorder.start(200); // Collect chunks every 200ms
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error accessing microphone:", err);
-          setError("Could not access your microphone. Please check permissions.");
+          setError(
+            "Could not access your microphone. Please check permissions."
+          );
           setIsListening(false);
         });
 
@@ -239,12 +215,17 @@ export default function StoriesPage() {
     }
 
     // Stop media recorder
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state === "recording"
+    ) {
       mediaRecorderRef.current.stop();
-      
+
       // Stop all tracks in the stream
       if (mediaRecorderRef.current.stream) {
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        mediaRecorderRef.current.stream
+          .getTracks()
+          .forEach((track) => track.stop());
       }
     }
 
@@ -252,7 +233,7 @@ export default function StoriesPage() {
     if (userSpeech) {
       const finalResults = processSpeech(userSpeech, true);
       const duration = (Date.now() - startTimeRef.current) / 1000; // in seconds
-      
+
       // Save reading attempt
       saveReadingAttempt({
         storyId: selectedStory.id,
@@ -260,7 +241,7 @@ export default function StoriesPage() {
         accuracy: finalResults.accuracy,
         duration,
         missedWords: finalResults.missedWords,
-        matchedWords: finalResults.matchedWords
+        matchedWords: finalResults.matchedWords,
       });
 
       setShowResults(true);
@@ -268,84 +249,93 @@ export default function StoriesPage() {
   }, [userSpeech, selectedStory.id]);
 
   // Process speech for word matching
-  const processSpeech = useCallback((speech: string, isFinal: boolean = false) => {
-    if (!speech || !selectedStory) return { accuracy: 0, missedWords: [], matchedWords: [] };
+  const processSpeech = useCallback(
+    (speech: string, isFinal: boolean = false) => {
+      if (!speech || !selectedStory)
+        return { accuracy: 0, missedWords: [], matchedWords: [] };
 
-    // Normalize text by removing punctuation and converting to lowercase
-    const normalizeText = (text: string) => {
-      return text.toLowerCase()
-        .replace(/[^\w\s]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    };
+      // Normalize text by removing punctuation and converting to lowercase
+      const normalizeText = (text: string) => {
+        return text
+          .toLowerCase()
+          .replace(/[^\w\s]/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+      };
 
-    // Get all words from the story
-    const storyWords = normalizeText(selectedStory.content)
-      .split(' ')
-      .filter(word => word.length > 0);
-    
-    // Get words from user speech
-    const userWords = normalizeText(speech)
-      .split(' ')
-      .filter(word => word.length > 0);
+      // Get all words from the story
+      const storyWords = normalizeText(selectedStory.content)
+        .split(" ")
+        .filter((word) => word.length > 0);
 
-    // Track which words were matched
-    const storyWordsMatched = new Set<number>();
-    const matchedWordsWithTimestamp: WordMatch[] = [];
-    const currentTime = Date.now();
+      // Get words from user speech
+      const userWords = normalizeText(speech)
+        .split(" ")
+        .filter((word) => word.length > 0);
 
-    // For each user word, find if it appears in the story
-    userWords.forEach(userWord => {
-      if (userWord.length < 2) return; // Skip very short words
-      
-      // Find the first unmatched occurrence of this word in the story
-      const storyIndex = storyWords.findIndex((storyWord, index) => 
-        !storyWordsMatched.has(index) && storyWord === userWord
-      );
+      // Track which words were matched
+      const storyWordsMatched = new Set<number>();
+      const matchedWordsWithTimestamp: WordMatch[] = [];
+      const currentTime = Date.now();
+      const listMissedWords: string[] = [];
 
-      if (storyIndex !== -1) {
-        storyWordsMatched.add(storyIndex);
-        matchedWordsWithTimestamp.push({
-          word: userWord,
-          matched: true,
-          timestamp: currentTime
-        });
+      // For each user word, find if it appears in the story
+      userWords.forEach((userWord, index) => {
+        // if (userWord.length < 2) return; // Skip very short words
+
+        // Find the first unmatched occurrence of this word in the story
+        const storyItem = storyWords[index];
+
+        if (storyItem.toLowerCase() === userWord.toLowerCase()) {
+          storyWordsMatched.add(index);
+          matchedWordsWithTimestamp.push({
+            word: userWord,
+            matched: true,
+            timestamp: currentTime,
+          });
+        } else {
+          listMissedWords.push(storyItem);
+        }
+      });
+
+      // Calculate accuracy
+      const accuracyPercent =
+        storyWords.length > 0
+          ? Math.round((storyWordsMatched.size / storyWords.length) * 100)
+          : 0;
+
+      // Update state if this is final processing
+      if (isFinal) {
+        setMissedWords(listMissedWords);
+        setMatchedWords(matchedWordsWithTimestamp);
+        setAccuracy(accuracyPercent);
       }
-    });
 
-    // Find missed words
-    const missed = storyWords
-      .filter((word, index) => !storyWordsMatched.has(index) && word.length > 2); // Ignore small words
-    
-    // Calculate accuracy
-    const accuracyPercent = storyWords.length > 0 
-      ? Math.round((storyWordsMatched.size / storyWords.length) * 100) 
-      : 0;
-
-    // Update state if this is final processing
-    if (isFinal) {
-      setMissedWords(missed);
-      setMatchedWords(matchedWordsWithTimestamp);
-      setAccuracy(accuracyPercent);
-    }
-
-    return {
-      accuracy: accuracyPercent,
-      missedWords: missed,
-      matchedWords: matchedWordsWithTimestamp
-    };
-  }, [selectedStory]);
+      return {
+        accuracy: accuracyPercent,
+        missedWords: listMissedWords,
+        matchedWords: matchedWordsWithTimestamp,
+      };
+    },
+    [selectedStory]
+  );
 
   // Save reading attempt to localStorage
-  const saveReadingAttempt = useCallback((attempt: ReadingAttempt) => {
-    try {
-      const updatedAttempts = [...readingAttempts, attempt];
-      setReadingAttempts(updatedAttempts);
-      localStorage.setItem("readingAttempts", JSON.stringify(updatedAttempts));
-    } catch (error) {
-      console.error("Error saving reading attempt:", error);
-    }
-  }, [readingAttempts]);
+  const saveReadingAttempt = useCallback(
+    (attempt: ReadingAttempt) => {
+      try {
+        const updatedAttempts = [...readingAttempts, attempt];
+        setReadingAttempts(updatedAttempts);
+        localStorage.setItem(
+          "readingAttempts",
+          JSON.stringify(updatedAttempts)
+        );
+      } catch (error) {
+        console.error("Error saving reading attempt:", error);
+      }
+    },
+    [readingAttempts]
+  );
 
   // Play the selected story using text-to-speech
   const playStory = useCallback(() => {
@@ -362,33 +352,45 @@ export default function StoriesPage() {
   // Generate highlighted text with matched and missed words
   const getHighlightedText = useCallback(() => {
     if (!showResults || !selectedStory) return selectedStory.content;
-    
+
     const normalizeText = (text: string) => {
-      return text.toLowerCase()
-        .replace(/[^\w\s]/g, '')
-        .replace(/\s+/g, ' ')
+      return text
+        .toLowerCase()
+        .replace(/[^\w\s]/g, "")
+        .replace(/\s+/g, " ")
         .trim();
     };
-    
-    const storyWords = normalizeText(selectedStory.content).split(' ');
+
     const missedWordsSet = new Set(missedWords);
-    
+    const userSpeechWords = normalizeText(userSpeech).split(" ");
+    let indexWord = -1;
+
     // Create spans with appropriate classes for highlighting
-    return selectedStory.content.split(/\b/).map((part) => {
-      const normalized = normalizeText(part);
-      if (!normalized || normalized.length < 2) return part;
-      
-      if (missedWordsSet.has(normalized)) {
-        return `<span class="text-red-500 font-bold">${part}</span>`;
-      } 
-      
-      if (storyWords.includes(normalized)) {
-        return `<span class="text-green-500">${part}</span>`;
-      }
-      
-      return part;
-    }).join('');
-  }, [selectedStory, missedWords, showResults]);
+    return selectedStory.content
+      .split(/\b/)
+      .map((part) => {
+        const normalized = normalizeText(part);
+        const skipMatch = !normalized  || normalized.length < 2
+        const excludeSkip = normalized !== 'a'
+        if (skipMatch && excludeSkip ) return part;
+        indexWord++;
+
+        if (missedWordsSet.has(normalized)) {
+          return `<span class="text-red-500 font-bold">${part}</span>`;
+        }
+
+        const userWord = userSpeechWords[indexWord];
+        if (!userWord) {
+          return part
+        }
+        if (userWord === normalized) {
+          return `<span class="text-green-500">${part}</span>`;
+        } else {
+          return `<span class="text-red-500 font-bold">${part}</span>`;
+        }
+      })
+      .join("");
+  }, [selectedStory, missedWords, showResults, userSpeech]);
 
   // Toggle the reading practice mode
   const toggleReading = useCallback(() => {
@@ -439,17 +441,23 @@ export default function StoriesPage() {
                       selectedStory.id === story.id
                         ? "border-blue-500 bg-blue-50"
                         : "border-gray-200 hover:border-blue-300"
-                    } ${(isListening || isReading) ? "opacity-50 cursor-not-allowed" : ""}`}
+                    } ${
+                      isListening || isReading
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
                   >
                     <h3 className="font-medium">{story.title}</h3>
                     <div className="flex justify-between mt-2 text-sm">
-                      <span className={`px-2 py-0.5 rounded ${
-                        story.difficulty === 'beginner' 
-                          ? 'bg-green-100 text-green-800' 
-                          : story.difficulty === 'intermediate'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span
+                        className={`px-2 py-0.5 rounded ${
+                          story.difficulty === "beginner"
+                            ? "bg-green-100 text-green-800"
+                            : story.difficulty === "intermediate"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
                         {story.difficulty}
                       </span>
                       <span className="text-gray-500">{story.words} words</span>
@@ -465,10 +473,12 @@ export default function StoriesPage() {
                 onClick={playStory}
                 disabled={isListening || isReading}
                 className={`flex items-center px-4 py-2 bg-green-500 text-white rounded-lg transition-colors ${
-                  isListening || isReading ? "opacity-50 cursor-not-allowed" : "hover:bg-green-600"
+                  isListening || isReading
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-green-600"
                 }`}
               >
-                <Sound /> 
+                <Sound />
                 <span className="ml-2">Listen to Story</span>
               </button>
 
@@ -482,7 +492,9 @@ export default function StoriesPage() {
                 } ${isReading ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 <Mic isListening={isListening} />
-                <span className="ml-2">{isListening ? "Stop Reading" : "Start Reading"}</span>
+                <span className="ml-2">
+                  {isListening ? "Stop Reading" : "Start Reading"}
+                </span>
               </button>
 
               {isReading && (
@@ -514,7 +526,9 @@ export default function StoriesPage() {
             {/* Reading results */}
             {showResults && (
               <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                <h3 className="text-lg font-medium mb-2">Your Reading Results</h3>
+                <h3 className="text-lg font-medium mb-2">
+                  Your Reading Results
+                </h3>
                 <div className="flex flex-wrap gap-4 mb-3">
                   <div className="bg-white p-3 rounded-lg shadow-sm">
                     <div className="text-sm text-gray-500">Accuracy</div>
@@ -522,11 +536,15 @@ export default function StoriesPage() {
                   </div>
                   <div className="bg-white p-3 rounded-lg shadow-sm">
                     <div className="text-sm text-gray-500">Words Read</div>
-                    <div className="text-2xl font-bold">{matchedWords.length}</div>
+                    <div className="text-2xl font-bold">
+                      {matchedWords.length}
+                    </div>
                   </div>
                   <div className="bg-white p-3 rounded-lg shadow-sm">
                     <div className="text-sm text-gray-500">Words Missed</div>
-                    <div className="text-2xl font-bold">{missedWords.length}</div>
+                    <div className="text-2xl font-bold">
+                      {missedWords.length}
+                    </div>
                   </div>
                 </div>
 
@@ -535,7 +553,11 @@ export default function StoriesPage() {
                     <h4 className="font-medium mb-1">Words you missed:</h4>
                     <div className="flex flex-wrap gap-2">
                       {missedWords.map((word, index) => (
-                        <span key={index} className="px-2 py-1 bg-red-100 text-red-800 rounded">
+                        <span
+                          key={index}
+                          onClick={() => speak(word)}
+                          className="px-2 py-1 bg-red-100 text-red-800 rounded"
+                        >
                           {word}
                         </span>
                       ))}
@@ -550,7 +572,7 @@ export default function StoriesPage() {
               <h3 className="text-lg font-medium mb-2">
                 {selectedStory.title}
               </h3>
-              
+
               {isListening && (
                 <div className="absolute right-0 top-0">
                   <div className="animate-pulse flex items-center">
@@ -560,20 +582,29 @@ export default function StoriesPage() {
                 </div>
               )}
 
-              <div 
+              <div
                 ref={storyContentRef}
                 className={`prose max-w-none p-4 bg-gray-50 rounded-lg overflow-y-auto ${
                   isListening ? "border-2 border-blue-500" : ""
                 }`}
-                style={{ maxHeight: "400px", whiteSpace: "pre-wrap", lineHeight: "1.8" }}
+                style={{
+                  maxHeight: "400px",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: "1.8",
+                }}
               >
                 {showResults ? (
-                  <div dangerouslySetInnerHTML={{ __html: getHighlightedText() }} />
+                  <div
+                    dangerouslySetInnerHTML={{ __html: getHighlightedText() }}
+                  />
                 ) : (
-                  selectedStory.content.split('\n').map((line, lineIndex) => (
+                  selectedStory.content.split("\n").map((line, lineIndex) => (
                     <p key={lineIndex} className="mb-2">
-                      {line.split(' ').map((word, wordIndex) => (
-                        <span key={`${lineIndex}-${wordIndex}`} className="inline-block mr-1">
+                      {line.split(" ").map((word, wordIndex) => (
+                        <span
+                          key={`${lineIndex}-${wordIndex}`}
+                          className="inline-block mr-1"
+                        >
                           {word}
                         </span>
                       ))}
@@ -585,7 +616,9 @@ export default function StoriesPage() {
 
             {/* User speech output for debugging */}
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <h4 className="text-sm font-medium mb-1">Voice-to-Text Debug Output:</h4>
+              <h4 className="text-sm font-medium mb-1">
+                Voice-to-Text Debug Output:
+              </h4>
               <div className="text-gray-700">
                 {userSpeech ? userSpeech : "No speech detected yet"}
               </div>
@@ -600,7 +633,15 @@ export default function StoriesPage() {
           {/* Reading history */}
           {readingAttempts.length > 0 && (
             <div className="mt-6 bg-white p-6 rounded-lg shadow-sm">
-              <h2 className="text-xl font-medium mb-3">Your Reading History</h2>
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-xl font-medium">Your Reading History</h2>
+                <button
+                  onClick={clearReadingHistory}
+                  className="px-3 py-1 bg-red-50 text-red-600 rounded-md border border-red-200 hover:bg-red-100 transition-colors text-sm font-medium"
+                >
+                  Clear History
+                </button>
+              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
@@ -617,7 +658,9 @@ export default function StoriesPage() {
                       .sort((a, b) => b.date - a.date)
                       .slice(0, 10)
                       .map((attempt, index) => {
-                        const story = STORIES.find(s => s.id === attempt.storyId) || STORIES[0];
+                        const story =
+                          STORIES.find((s) => s.id === attempt.storyId) ||
+                          STORIES[0];
                         return (
                           <tr key={index} className="border-b">
                             <td className="px-4 py-2">
@@ -629,9 +672,13 @@ export default function StoriesPage() {
                               {attempt.duration.toFixed(1)} sec
                             </td>
                             <td className="px-4 py-2">
-                              {attempt.missedWords.length > 0 
-                                ? attempt.missedWords.slice(0, 3).join(", ") + 
-                                  (attempt.missedWords.length > 3 ? `... (+${attempt.missedWords.length - 3} more)` : "")
+                              {attempt.missedWords.length > 0
+                                ? attempt.missedWords.slice(0, 3).join(", ") +
+                                  (attempt.missedWords.length > 3
+                                    ? `... (+${
+                                        attempt.missedWords.length - 3
+                                      } more)`
+                                    : "")
                                 : "None"}
                             </td>
                           </tr>
