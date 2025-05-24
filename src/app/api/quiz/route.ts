@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { OpenAI } from "openai";
+import { updateGist } from '@/utils/githubGist';
 import { getCachedResult, setCachedResult } from "@/lib/cache";
 
 const formatChoosenJSON = `
@@ -68,30 +69,8 @@ export async function POST(req) {
       result[messages] = [completion.choices[0].message];
     }
 
-    // Format date in Jakarta timezone (UTC+7)
-    const jakartaTime = new Date();
-    jakartaTime.setHours(jakartaTime.getHours() + 7);
-    const jakartaTimeString = jakartaTime.toISOString().replace('Z', '+07:00');
-    
-    const updateData = {
-      description: `Updated via API on ${jakartaTimeString}`,
-      files: {
-        'english.json': {
-          content: JSON.stringify(result)
-        }
-      }
-    };
-    
-    // Call GitHub API to update the Gist
-    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `token ${process.env.GIT_UPDATE_SECRET}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github.v3+json'
-      },
-      body: JSON.stringify(updateData)
-    });
+    // Use the utility function to update the Gist
+    await updateGist(GIST_ID, 'english.json', result);
 
     // Store the result in our shared cache
     setCachedResult(messages, completion.choices[0].message);

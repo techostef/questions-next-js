@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { DEFAULT_CHAT_MODEL } from '@/constants/listModelsOpenAI';
+import { updateGist } from '@/utils/githubGist';
 
 // Gist ID for bank-english
 const GIST_ID = '1556b6ba9012fab30e737c03bade8c7e';
@@ -129,19 +130,7 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
     
-    const updateResponse = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `token ${githubToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github.v3+json'
-      },
-      body: JSON.stringify(updateData)
-    });
-    
-    if (!updateResponse.ok) {
-      throw new Error(`Failed to update gist: ${updateResponse.status} ${updateResponse.statusText}`);
-    }
+    await updateGist(GIST_ID, 'bankenglish.json', JSON.stringify(updateData));
     
     return NextResponse.json({
       success: true,
