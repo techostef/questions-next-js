@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -6,11 +7,17 @@ import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import VoiceSelector from "@/components/VoiceSelector";
+import {
+  SpeechRecognition,
+  SpeechRecognitionErrorEvent,
+  SpeechRecognitionEvent,
+  SpeechRecognitionResultItem,
+} from "./type";
 import { Sound } from "@/assets/sound";
+import { sendErrorToServer } from "@/lib/error";
 import { Mic } from "@/assets/mic";
 import ReactMarkdown from "react-markdown";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 
@@ -40,19 +47,12 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_CHAT_MODEL);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Use the speech synthesis hook
   const { speak, updateVoiceType } = useSpeechSynthesis();
-  
-  // Use the speech recognition hook
-  const { 
-    transcript, 
-    isListening, 
-    isSupported, 
-    toggleListening,
-    clearTranscript 
-  } = useSpeechRecognition();
 
   // Load cached messages on initial render
   useEffect(() => {
@@ -64,6 +64,7 @@ export default function ChatPage() {
   const { isAuthenticated, user, logout } = useAuth();
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // If not authenticated, redirect to login page
   useEffect(() => {
@@ -76,7 +77,110 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Auto-scroll to bottom of messages and cache conversation history
+  // Initialize speech recognition when component mounts
+  useEffect(() => {
+    // Only run in browser environment
+    if (typeof window === "undefined") return;
+
+    // Check for browser support
+    try {
+      // Check if we're in Firefox (which doesn't support SpeechRecognition well)
+      const isFirefox = navigator.userAgent.indexOf("Firefox") !== -1;
+
+      // Firefox detection - show notice in console but don't try to initialize
+      if (isFirefox) {
+        console.log("Firefox detected. Speech recognition may not work properly.");
+        // We'll still attempt to initialize but warn the user
+      }
+
+      const SpeechRecognition =
+        window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        console.error("Speech Recognition API not supported in this browser");
+        sendErrorToServer(new Error("Speech Recognition not supported"), {
+          componentStack: "Browser doesn't support SpeechRecognition or webkitSpeechRecognition",
+          browser: navigator.userAgent,
+        });
+        return;
+      }
+
+      recognitionRef.current = new (SpeechRecognition as any)();
+      recognitionRef.current.continuous = false; // Changed to false for better silence detection
+      recognitionRef.current.interimResults = true;
+
+      // Add language setting to improve recognition
+      recognitionRef.current.lang = "en-US";
+
+      // Track the last speech detection time
+      let lastSpeechTime = 0;
+
+      // Set up speech detection and end events
+      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
+        lastSpeechTime = Date.now();
+
+        const transcript = Array.from(event.results)
+          .map((result: SpeechRecognitionResult) => result[0])
+          .map((result: SpeechRecognitionResultItem) => result.transcript)
+          .join("");
+
+        setInput(transcript);
+
+        // Start the auto-stop timer after getting results
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+        }
+
+        silenceTimerRef.current = setTimeout(() => {
+          if (recognitionRef.current && Date.now() - lastSpeechTime >= 2000) {
+            console.log("Auto-stopping after 2 seconds of silence");
+            recognitionRef.current.stop();
+            // Don't set isListening here, we'll update it in onend handler
+          }
+        }, 2000);
+      };
+
+      // This event fires when recognition stops for any reason
+      recognitionRef.current.onend = () => {
+        console.log("Speech recognition ended");
+        setIsListening(false);
+
+        // Clear the silence timer if it exists
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+      };
+
+      // Handle errors in speech recognition
+      recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error("Speech recognition error:", event.error);
+        setIsListening(false);
+
+        // Send detailed error info to the server
+        sendErrorToServer(
+          new Error(`Speech recognition error: ${event.error}`),
+          { componentStack: `SpeechRecognition.onerror: ${event.error}` }
+        );
+
+        // Clear any timers
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+        setIsListening(false);
+      };
+    } catch (error) {
+      console.error("Error initializing speech recognition:", error);
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  // Auto-scroll to bottom of messages and speak new assistant messages
   useEffect(() => {
     scrollToBottom();
 
@@ -89,18 +193,43 @@ export default function ChatPage() {
       }
     }
   }, [messages]);
-  
-  // Update input field when transcript changes
-  useEffect(() => {
-    if (transcript) {
-      setInput(transcript);
-    }
-  }, [transcript]);
 
-  // Handle reset of input and transcript
-  const resetInput = () => {
-    setInput("");
-    clearTranscript();
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      console.error("Speech recognition not initialized");
+      sendErrorToServer(new Error("Speech recognition not initialized"), {
+        componentStack: "toggleListening failed because recognitionRef is null",
+      });
+      return;
+    }
+
+    if (isListening) {
+      // Clear any existing silence timer when manually stopping
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error("Error stopping speech recognition:", error);
+        sendErrorToServer(error as Error, { componentStack: "recognitionRef.current.stop()" });
+        // Force update the listening state since the onend might not fire
+        setIsListening(false);
+      }
+      // Don't set isListening here, let the onend handler do it
+    } else {
+      // Only update state and start recognition when turning on
+      setIsListening(true);
+      try {
+        recognitionRef.current.start();
+      } catch (error) {
+        console.error("Error starting speech recognition:", error);
+        sendErrorToServer(error as Error, { componentStack: "recognitionRef.current.start()" });
+        // Reset the state since we failed to start
+        setIsListening(false);
+      }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,7 +238,7 @@ export default function ChatPage() {
 
     const userMessage = { role: "user" as const, content: input };
     setMessages((prev) => [...prev, userMessage]);
-    resetInput();
+    setInput("");
     setIsLoading(true);
 
     try {
@@ -271,7 +400,7 @@ export default function ChatPage() {
                 onClick={toggleListening}
                 className={`p-2 rounded-full ${isListening ? "bg-red-500" : "bg-green-500"} text-white mr-2`}
                 title={isListening ? "Stop listening" : "Start listening"}
-                disabled={!isSupported}
+                disabled={!recognitionRef.current}
               >
                 <Mic isListening={isListening} />
               </button>
