@@ -8,6 +8,7 @@ import TabNavigation from "@/components/TabNavigation";
 import { Sound } from "@/assets/sound";
 import { Mic } from "@/assets/mic";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import Dialog from "@/components/Dialog";
 import { TABS } from "../constants";
 import { STORIES } from "./mockData";
 
@@ -55,6 +56,7 @@ export default function StoriesPage() {
   const [readingAttempts, setReadingAttempts] = useState<ReadingAttempt[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isStoryDialogOpen, setIsStoryDialogOpen] = useState(false);
 
   // Refs for managing speech recognition
   const recognitionRef = useRef<any>(null);
@@ -424,39 +426,69 @@ export default function StoriesPage() {
           <TabNavigation tabs={TABS} />
 
           <div className="mt-6 bg-white p-6 rounded-lg shadow-sm">
-            {/* Story selection */}
+            {/* Story selection button */}
             <div className="mb-6">
-              <h2 className="text-xl font-medium mb-3">Select a Story</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-medium">Current Story</h2>
+                <button
+                  onClick={() => {
+                    if (!isListening && !isReading) {
+                      setIsStoryDialogOpen(true);
+                    }
+                  }}
+                  className={`px-4 py-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors ${isListening || isReading ? "opacity-50 cursor-not-allowed" : ""}`}
+                  disabled={isListening || isReading}
+                >
+                  Change Story
+                </button>
+              </div>
+              
+              {/* Current story card */}
+              <div className="p-4 border rounded-lg border-blue-500 bg-blue-50">
+                <h3 className="font-medium text-lg">{selectedStory.title}</h3>
+                <div className="flex justify-between mt-2">
+                  <span
+                    className={`px-2 py-0.5 rounded ${selectedStory.difficulty === "beginner" ? "bg-green-100 text-green-800" : selectedStory.difficulty === "intermediate" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
+                  >
+                    {selectedStory.difficulty}
+                  </span>
+                  <span className="text-gray-500">{selectedStory.words} words</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Story selection dialog using the reusable Dialog component */}
+            <Dialog
+              isOpen={isStoryDialogOpen}
+              onClose={() => setIsStoryDialogOpen(false)}
+              title="Select a Story"
+              maxWidth="max-w-3xl"
+              footer={
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setIsStoryDialogOpen(false)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              }
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
                 {STORIES.map((story) => (
                   <div
                     key={story.id}
                     onClick={() => {
-                      if (!isListening && !isReading) {
-                        setSelectedStory(story);
-                        resetReading();
-                      }
+                      setSelectedStory(story);
+                      resetReading();
+                      setIsStoryDialogOpen(false);
                     }}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                      selectedStory.id === story.id
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
-                    } ${
-                      isListening || isReading
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                    }`}
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedStory.id === story.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
                   >
                     <h3 className="font-medium">{story.title}</h3>
                     <div className="flex justify-between mt-2 text-sm">
                       <span
-                        className={`px-2 py-0.5 rounded ${
-                          story.difficulty === "beginner"
-                            ? "bg-green-100 text-green-800"
-                            : story.difficulty === "intermediate"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
+                        className={`px-2 py-0.5 rounded ${story.difficulty === "beginner" ? "bg-green-100 text-green-800" : story.difficulty === "intermediate" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
                       >
                         {story.difficulty}
                       </span>
@@ -465,7 +497,7 @@ export default function StoriesPage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </Dialog>
 
             {/* Reading controls */}
             <div className="mb-4 flex flex-wrap gap-3 justify-center">
