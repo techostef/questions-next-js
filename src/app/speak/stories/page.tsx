@@ -49,6 +49,17 @@ export default function StoriesPage() {
   const [selectedStory, setSelectedStory] = useState<Story>(STORIES[0]);
   const [isReading, setIsReading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  
+  // Custom setter for selected story that also caches the selection
+  const setSelectedStoryWithCache = useCallback((story: Story) => {
+    setSelectedStory(story);
+    // Save to localStorage
+    try {
+      localStorage.setItem("selectedStoryId", story.id);
+    } catch (error) {
+      console.error("Error saving selected story:", error);
+    }
+  }, []);
   const [userSpeech, setUserSpeech] = useState("");
   const [missedWords, setMissedWords] = useState<string[]>([]);
   const [matchedWords, setMatchedWords] = useState<WordMatch[]>([]);
@@ -68,8 +79,9 @@ export default function StoriesPage() {
   // Speech synthesis for reading the story
   const { speak, stop } = useSpeechSynthesis();
 
-  // Load reading attempts from localStorage
+  // Load reading attempts and selected story from localStorage
   useEffect(() => {
+    // Load reading attempts
     const loadAttempts = () => {
       try {
         const savedAttempts = localStorage.getItem("readingAttempts");
@@ -82,7 +94,23 @@ export default function StoriesPage() {
       }
     };
 
+    // Load selected story
+    const loadSelectedStory = () => {
+      try {
+        const savedStoryId = localStorage.getItem("selectedStoryId");
+        if (savedStoryId) {
+          const story = STORIES.find(s => s.id === savedStoryId);
+          if (story) {
+            setSelectedStory(story);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading selected story:", error);
+      }
+    };
+
     loadAttempts();
+    loadSelectedStory();
   }, []);
   
   // Function to clear reading history
@@ -479,7 +507,7 @@ export default function StoriesPage() {
                   <div
                     key={story.id}
                     onClick={() => {
-                      setSelectedStory(story);
+                      setSelectedStoryWithCache(story);
                       resetReading();
                       setIsStoryDialogOpen(false);
                     }}
