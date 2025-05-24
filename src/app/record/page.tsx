@@ -1,5 +1,5 @@
 
-import RecordPageComp from '@/app/feature/Record';
+import RecordPageComp from '@/app/feature/RecordOther';
 
 export default function RecordPage() {
   return (

@@ -1,56 +1,26 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
 export default function RecordPage() {
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      console.log("webkitSpeechRecognition", window.webkitSpeechRecognition)
-      console.log("SpeechRecognition", window.SpeechRecognition)
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const transcriptPiece = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            setTranscript((prev) => prev + transcriptPiece + ' ');
-          } else {
-            interim += transcriptPiece;
-          }
-        }
-        // Optional: show interim results
-        console.log('Interim:', interim);
-      };
-
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    } else {
-      console.warn('Speech Recognition not supported in this browser.');
-    }
-  }, []);
+  // Speech recognition for listening to the user
+  const { 
+    transcript, 
+    isListening,
+    startListening, 
+    stopListening, 
+  } = useSpeechRecognition({
+    silenceTimeout: 0,
+    language: 'en-US',
+    continuous: true,
+    interimResults: true
+  });
 
   const toggleListening = () => {
-    if (!recognitionRef.current) return;
-
     if (!isListening) {
-      recognitionRef.current.start();
-      setIsListening(true);
+      startListening();
     } else {
-      recognitionRef.current.stop();
-      setIsListening(false);
+      stopListening()
     }
   };
 

@@ -206,7 +206,6 @@ export default function StoriesPage() {
 
   // Refs for managing audio recording
   const audioChunksRef = useRef<Blob[]>([]);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const storyContentRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<number>(0);
 
@@ -311,6 +310,7 @@ export default function StoriesPage() {
       setStories([...data, ...STORIES]);
       return data;
     } catch (error) {
+      setStories([...STORIES]);
       console.error('Error fetching stories:', error);
       return [];
     } finally {
@@ -481,28 +481,6 @@ export default function StoriesPage() {
       audioChunksRef.current = [];
       startTimeRef.current = Date.now();
 
-      // Start recording audio (for saving the attempt)
-      navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then((stream) => {
-          const mediaRecorder = new MediaRecorder(stream);
-          mediaRecorderRef.current = mediaRecorder;
-
-          mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-              audioChunksRef.current.push(event.data);
-            }
-          };
-
-          mediaRecorder.start(200); // Collect chunks every 200ms
-        })
-        .catch((err) => {
-          console.error("Error accessing microphone:", err);
-          setComponentError(
-            "Could not access your microphone. Please check permissions."
-          );
-        });
-
       // Start speech recognition
       startListening();
     } catch (error) {
@@ -540,21 +518,6 @@ export default function StoriesPage() {
   const endReadingSession = useCallback(() => {
     // Stop speech recognition using the hook
     stopListening();
-
-    // Stop media recorder
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state === "recording"
-    ) {
-      mediaRecorderRef.current.stop();
-
-      // Stop all tracks in the stream
-      if (mediaRecorderRef.current.stream) {
-        mediaRecorderRef.current.stream
-          .getTracks()
-          .forEach((track) => track.stop());
-      }
-    }
 
     // Process final results
     processResults();

@@ -67,22 +67,9 @@ export async function getGistContent<T>(
   gistId: string,
   fileName: string
 ): Promise<T> {
-  // Get GitHub token from environment
-  const githubToken = process.env.GIT_UPDATE_SECRET;
-  
-  const headers: HeadersInit = {
-    'Accept': 'application/vnd.github.v3+json'
-  };
-  
-  // Add auth token if available
-  if (githubToken) {
-    headers['Authorization'] = `token ${githubToken}`;
-  }
-  
   // Call GitHub API to get the Gist
-  const response = await fetch(`https://api.github.com/gists/${gistId}`, {
-    headers
-  });
+  const fullURL = `https://gist.githubusercontent.com/techostef/${gistId}/raw/${fileName}`
+  const response = await fetch(fullURL);
   
   if (!response.ok) {
     throw new Error(`Failed to fetch Gist: ${response.status} ${response.statusText}`);
@@ -91,7 +78,7 @@ export async function getGistContent<T>(
   const gistData = await response.json();
   
   if (!gistData.files || !gistData.files[fileName]) {
-    throw new Error(`File "${fileName}" not found in Gist`);
+    throw new Error(`File "${fileName}" not found in Gist, ${fullURL}`);
   }
   
   // Parse and return the content
