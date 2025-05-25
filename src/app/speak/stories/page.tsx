@@ -573,7 +573,7 @@ export default function StoriesPage() {
               onClose={() => setIsStoryDialogOpen(false)}
               isLoading={isLoading}
               stories={stories}
-              setSelectedStoryWithCache={setSelectedStory}
+              setSelectedStoryWithCache={setSelectedStoryWithCache}
               resetReading={resetReading}
               selectedStory={selectedStory}
             />
