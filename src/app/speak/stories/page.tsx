@@ -9,10 +9,12 @@ import { Sound } from "@/assets/sound";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 // No longer using speech recognition directly - now using StoryReader component
 import StoryReader from "@/app/feature/StoryReader";
-import Dialog from "@/components/Dialog";
 import { TABS } from "../constants";
 import { STORIES } from "./mockData";
 import AddStories from "@/app/feature/stories/addStories";
+import HistoryAttempts from "@/app/feature/stories/historyAttemps";
+import { findMistakes } from "@/lib/string";
+import ListStories from "@/app/feature/stories/listStories";
 
 // SpeechRecognition is now handled by the useSpeechRecognition hook
 
@@ -36,7 +38,7 @@ interface WordMatch {
   timestamp: number;
 }
 
-interface ReadingAttempt {
+export interface ReadingAttempt {
   storyId: string;
   date: number;
   recordedAudio?: string; // Base64 encoded audio
@@ -49,142 +51,6 @@ interface ReadingAttempt {
 interface MissedWord {
   index: number;
   word: string;
-}
-
-function findMistakes(original, test) {
-  // Helper function to clean and split text into words
-  const clean = (str) =>
-    str
-      .toLowerCase()
-      .replace(/[.,!?;:"']/g, "") // remove punctuation
-      .split(/\s+/) // split by any whitespace
-      .filter((w) => w.length > 0); // remove empty strings
-
-  const originalWords = clean(original);
-  const testWords = clean(test);
-
-  // Use Levenshtein distance to find best alignment
-  const results = findBestAlignment(originalWords, testWords);
-  return results;
-}
-
-function findBestAlignment(originalWords, testWords) {
-  // Use dynamic programming to find the best alignment
-  const mistakes = [];
-  let i = 0;
-  let j = 0;
-
-  // Track previous matches to detect substitution patterns
-  const substitutions = {};
-
-  while (i < originalWords.length && j < testWords.length) {
-    if (originalWords[i] === testWords[j]) {
-      // Words match exactly
-      i++;
-      j++;
-    } else if (
-      j + 1 < testWords.length &&
-      originalWords[i] === testWords[j + 1]
-    ) {
-      // Extra word in test - skip it
-      j++;
-    } else if (
-      i + 1 < originalWords.length &&
-      originalWords[i + 1] === testWords[j]
-    ) {
-      // Missing word in test
-      mistakes.push({
-        index: i,
-        word: originalWords[i],
-        type: "missing",
-        context: getContext(originalWords, i),
-      });
-      i++;
-    } else {
-      // Word substitution - check for phonetic or semantic similarity
-      if (areSimilarWords(originalWords[i], testWords[j])) {
-        // Similar but not exact match
-        substitutions[originalWords[i]] = testWords[j];
-        mistakes.push({
-          index: i,
-          word: originalWords[i],
-          type: "substitution",
-          replacement: testWords[j],
-          context: getContext(originalWords, i),
-        });
-      } else {
-        // Completely different words
-        mistakes.push({
-          index: i,
-          word: originalWords[i],
-          type: "missing",
-          context: getContext(originalWords, i),
-        });
-      }
-      i++;
-      j++;
-    }
-  }
-
-  // Add remaining missing words from original
-  while (i < originalWords.length) {
-    mistakes.push({
-      index: i,
-      word: originalWords[i],
-      type: "missing",
-      context: getContext(originalWords, i),
-    });
-    i++;
-  }
-
-  return mistakes;
-}
-
-// Check if words are similar (could be expanded with more sophisticated checks)
-function areSimilarWords(word1, word2) {
-  // Simple character-based similarity
-  const similarity = calculateSimilarity(word1, word2);
-  return similarity > 0.5; // Threshold for similarity
-}
-
-// Calculate string similarity ratio using Levenshtein distance
-function calculateSimilarity(s1, s2) {
-  if (s1.length === 0 || s2.length === 0) return 0;
-
-  // Calculate Levenshtein distance
-  const track = Array(s2.length + 1)
-    .fill(null)
-    .map(() => Array(s1.length + 1).fill(null));
-
-  for (let i = 0; i <= s1.length; i += 1) {
-    track[0][i] = i;
-  }
-
-  for (let j = 0; j <= s2.length; j += 1) {
-    track[j][0] = j;
-  }
-
-  for (let j = 1; j <= s2.length; j += 1) {
-    for (let i = 1; i <= s1.length; i += 1) {
-      const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
-      track[j][i] = Math.min(
-        track[j][i - 1] + 1, // deletion
-        track[j - 1][i] + 1, // insertion
-        track[j - 1][i - 1] + indicator // substitution
-      );
-    }
-  }
-
-  const distance = track[s2.length][s1.length];
-  const maxLength = Math.max(s1.length, s2.length);
-  return maxLength > 0 ? (maxLength - distance) / maxLength : 1;
-}
-
-// Get context around a word to help identify its position
-function getContext(words, index, windowSize = 2) {
-  const start = Math.max(0, index - windowSize);
-  const end = Math.min(words.length, index + windowSize + 1);
-  return words.slice(start, end).join(" ");
 }
 
 export default function StoriesPage() {
@@ -243,20 +109,6 @@ export default function StoriesPage() {
       content: paragraph,
       words: paragraph.split(/\s+/).filter((word) => word.length > 0).length,
     }));
-  }, []);
-  // Test the improved algorithm with the example sentences
-  const testFindMistakes = () => {
-    const originalText = `Yesterday, I had an interview with a team based in the Philippines. Initially, I thought I was rejected because they abruptly left the meeting without notifying me, but they later emailed me to reschedule.`;
-    const testText = `yesterday I had an interview with a team based in the Philippines initially I thought I was rejected because they are probably left the meeting without notifying me but the letter emailed me to reschedule`;
-
-    const mistakes = findMistakes(originalText, testText);
-
-    return mistakes;
-  };
-
-  // Run the test once on component initialization
-  useEffect(() => {
-    testFindMistakes();
   }, []);
 
   // Custom setter for selected story that also caches
@@ -446,10 +298,6 @@ export default function StoriesPage() {
     // No need to clear transcript anymore - handled by StoryReader
   }, []);
 
-  // This function was previously used for starting speech recognition sessions
-  // Now we're using the StoryReader component directly, but keeping this
-  // as it might be needed for backward compatibility or future use
-
   // Process final results
   const processResults = useCallback(
     (userSpeech: string) => {
@@ -491,11 +339,6 @@ export default function StoriesPage() {
       processResults(userSpeech);
     }
   }, [userSpeech]);
-
-  // No longer needed - StoryReader handles this
-
-  // This function was previously used to stop speech recognition
-  // Keeping it defined but unused for now as we transition to the new recording method
 
   // Set the selected part index and save to localStorage
   const setPartIndexWithCache = useCallback(
@@ -725,61 +568,15 @@ export default function StoriesPage() {
               </div>
             </div>
 
-            {/* Story selection dialog using the reusable Dialog component */}
-            <Dialog
-              isOpen={isStoryDialogOpen}
+            <ListStories
+              isStoryDialogOpen={isStoryDialogOpen}
               onClose={() => setIsStoryDialogOpen(false)}
-              title="Select a Story"
-              maxWidth="max-w-3xl"
-              footer={
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setIsStoryDialogOpen(false)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              }
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-2">
-                {isLoading ? (
-                  <div className="flex justify-center items-center py-6">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  </div>
-                ) : (
-                  stories.map((story) => (
-                    <div
-                      key={story.id}
-                      onClick={() => {
-                        setSelectedStoryWithCache(story);
-                        resetReading();
-                        setIsStoryDialogOpen(false);
-                      }}
-                      className={`relative p-4 flex flex-col border rounded-lg cursor-pointer transition-colors ${
-                        selectedStory?.id === story.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-blue-300"
-                      }`}
-                    >
-                      <span
-                        className={`px-2 py-0.5 rounded capitalize ${
-                          story.difficulty === "beginner"
-                            ? "bg-green-100 text-green-800"
-                            : story.difficulty === "intermediate"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {story.difficulty}
-                      </span>
-                      <h3 className="font-medium mt-2 mb-5">{story.title}</h3>
-                      <div className="text-gray-500 absolute right-5 bottom-2">{story.words} words</div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </Dialog>
+              isLoading={isLoading}
+              stories={stories}
+              setSelectedStoryWithCache={setSelectedStory}
+              resetReading={resetReading}
+              selectedStory={selectedStory}
+            />
 
             <AddStories
               isAddStoryDialogOpen={isAddStoryDialogOpen}
@@ -983,67 +780,13 @@ export default function StoriesPage() {
                 </div>
               )}
             </div>
+            
+            <HistoryAttempts 
+              readingAttempts={readingAttempts}
+              clearReadingHistory={clearReadingHistory}
+              stories={stories}
+            />
           </div>
-
-          {/* Reading history */}
-          {readingAttempts.length > 0 && (
-            <div className="mt-6 bg-white p-6 rounded-lg shadow-sm">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="text-xl font-medium">Your Reading History</h2>
-                <button
-                  onClick={clearReadingHistory}
-                  className="px-3 py-1 bg-red-50 text-red-600 rounded-md border border-red-200 hover:bg-red-100 transition-colors text-sm font-medium"
-                >
-                  Clear History
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="px-4 py-2 text-left">Date</th>
-                      <th className="px-4 py-2 text-left">Story</th>
-                      <th className="px-4 py-2 text-left">Accuracy</th>
-                      <th className="px-4 py-2 text-left">Duration</th>
-                      <th className="px-4 py-2 text-left">Missed Words</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {readingAttempts
-                      .sort((a, b) => b.date - a.date)
-                      .slice(0, 10)
-                      .map((attempt, index) => {
-                        const story =
-                          STORIES.find((s) => s.id === attempt.storyId) ||
-                          STORIES[0];
-                        return (
-                          <tr key={index} className="border-b">
-                            <td className="px-4 py-2">
-                              {new Date(attempt.date).toLocaleDateString()}
-                            </td>
-                            <td className="px-4 py-2">{story.title}</td>
-                            <td className="px-4 py-2">{attempt.accuracy}%</td>
-                            <td className="px-4 py-2">
-                              {attempt.duration.toFixed(1)} sec
-                            </td>
-                            <td className="px-4 py-2">
-                              {attempt.missedWords.length > 0
-                                ? attempt.missedWords.slice(0, 3).join(", ") +
-                                  (attempt.missedWords.length > 3
-                                    ? `... (+${
-                                        attempt.missedWords.length - 3
-                                      } more)`
-                                    : "")
-                                : "None"}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </ProtectedRoute>

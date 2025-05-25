@@ -3,11 +3,39 @@ import { Story } from "./page";
 // Mock stories for practice
 export const STORIES: Story[] = [
   {
-    "id": "my-story-1",
-    "title": "Second Interview",
-    "content": "Yesterday, I had an interview with a team based in the Philippines. Initially, I thought I was rejected because they abruptly left the meeting without notifying me, but they later emailed me to reschedule.\n\nDuring the rescheduled interview, they assigned me a task to enhance the autocomplete feature. I initially used debouncing to handle the problem, but then I switched to using a real-time API to fetch the autocorrection data. I mapped and cached the data, so when the user typed, their input was automatically corrected using the mapped data. This solution was successfully approved by the interviewer.\n\nSince I’m not entirely confident in my English, I’m now developing a feature in my application that reads stories aloud to help me expand my vocabulary and improve my pronunciation.",
-    "difficulty": "intermediate",
-    "words": 128
+    id: "my-story-1",
+    title: "Second Interview Experience",
+    content:
+      "Yesterday, I had an interview with a team based in the Philippines. Initially, I thought I was rejected because they abruptly left the meeting without notifying me, but they later emailed me to reschedule.\n\nDuring the rescheduled interview, they assigned me a task to enhance the autocomplete feature. I initially used debouncing to handle the problem, but then I switched to using a real-time API to fetch the autocorrection data. I mapped and cached the data, so when the user typed, their input was automatically corrected using the mapped data. This solution was successfully approved by the interviewer.\n\nSince I’m not entirely confident in my English, I’m now developing a feature in my application that reads stories aloud to help me expand my vocabulary and improve my pronunciation.",
+    difficulty: "intermediate",
+    words: 128,
+  },
+  {
+    id: "my-story-2",
+    title: "My Story Prepare to the next Interview",
+    content: "Tomorrow, I will get the result of the interview I did yesterday, and I hope to move on to the next round. To achieve that, I need to train my English more rigorously. \n\nYesterday, I also worked on improving my English by developing a feature for practicing speaking, which will help enhance my vocabulary and pronunciation. \n\nHowever, I faced an obstacle because the Android device limits how long I can use the microphone. To work around this, I used OpenAI to convert my speech to text, but I still want to improve it so I can use the microphone for longer periods without relying on AI.",
+    difficulty: "beginner",
+    words: 128,
+  },
+  {
+    id: "my-story-3",
+    title: "My Story Build Time Application",
+    content: "The most challenging project I worked on was improving our application's build time. Initially, it took around four hours for front-end updates to reflect for all clients because each client required a unique environment variable, which was only set at build time. This process made updates extremely slow and inefficient. \n\nTo tackle this, I explored solutions using Next.js and learned about Docker and Kubernetes to simulate and optimize our build process. By leveraging these technologies, I managed to reduce the build time from a few hours to just a few minutes, significantly improving our development efficiency and reducing costs. I'm proud of this achievement because it not only streamlined our workflow but also helped me grow my expertise in these technologies.",
+    difficulty: "beginner",
+    words: 128,
+  },
+  {
+    id: "my-story-4",
+    title: "My Story SEO Improvements",
+    content: "Before implementing the SEO improvements, I conducted thorough research on best practices and shared my findings with the team. We collaboratively split tasks and worked together to address issues like heavy initial loading and blocking splash screens. By implementing techniques such as lazy loading, code splitting, and optimizing imports, we raised the Lighthouse score from around 18 to approximately 60, significantly enhancing the application's visibility and efficiency.",
+    difficulty: "beginner",
+    words: 128,
+  },
+  {
+    id: "my-story-5",
+    title: "My Story Staging Deployment",
+    content: "Yesterday, I overslept because I had worked overnight. This morning, I didn't follow my usual routines like reading books or practicing speaking, because I had to prepare for my daily stand-up to update my team on what I did yesterday. \n\nAfter the meeting, I worked on some tasks to meet my deadline, because it was the deployment day to the staging environment, so I had to finish my feature on time. After finishing my tasks, I didn't do much else because I was in meetings all day. In the evening, I practiced my English and worked on improving my application, which helps with speaking by reading and memorizing new vocabulary, as well as doing text quizzes to improve my grammar knowledge.",difficulty: "beginner",
+    words: 128,
   },
   {
     id: "story-1",
@@ -203,37 +231,42 @@ During the initial deployment, the anomaly engine detected an unusual surge in a
   {
     id: "story-22",
     title: "The Morning Chase",
-    content: "Every morning, Ben's alarm rang at 6:00. He quickly got dressed and ran to catch the bus. One day, the bus stopped just as he reached the corner. Ben waved and shouted, but the doors closed. He felt disappointed. Instead of giving up, he decided to ride his scooter. He grabbed his helmet, hopped on, and zoomed down the street. The wind rushed past his ears. He arrived at school with time to spare. His friends cheered when they saw him. Ben smiled and promised to always have a backup plan.",
+    content:
+      "Every morning, Ben's alarm rang at 6:00. He quickly got dressed and ran to catch the bus. One day, the bus stopped just as he reached the corner. Ben waved and shouted, but the doors closed. He felt disappointed. Instead of giving up, he decided to ride his scooter. He grabbed his helmet, hopped on, and zoomed down the street. The wind rushed past his ears. He arrived at school with time to spare. His friends cheered when they saw him. Ben smiled and promised to always have a backup plan.",
     difficulty: "beginner",
-    words: 91
+    words: 91,
   },
   {
     id: "story-23",
     title: "The Missing Keys",
-    content: "Lily stood at the door of her house, but she could not unlock it. She patted her pockets and realized her keys were missing. She felt worried. She retraced her steps: the park, the library, and the grocery store. At each place, she asked if someone had found a key. No one had. Just when she lost hope, a policeman walked by and handed her a small ring of keys. He had found them near the playground. Lily thanked him and promised to keep a spare set hidden at home. She unlocked the door.",
+    content:
+      "Lily stood at the door of her house, but she could not unlock it. She patted her pockets and realized her keys were missing. She felt worried. She retraced her steps: the park, the library, and the grocery store. At each place, she asked if someone had found a key. No one had. Just when she lost hope, a policeman walked by and handed her a small ring of keys. He had found them near the playground. Lily thanked him and promised to keep a spare set hidden at home. She unlocked the door.",
     difficulty: "beginner",
-    words: 94
+    words: 94,
   },
   {
     id: "story-24",
     title: "The Playground Game",
-    content: "After school, Emma and her friends went to the playground. They decided to play tag. Emma was \"it\" first. She ran behind her friends, laughing as she tried to catch them. Tom climbed the slide to avoid being tagged, but Emma reached him and tapped his shoulder. Then, Emma tagged Maria, who squealed and started chasing the others. The sun began to set, and their parents called them home. Emma said goodbye to her friends and walked home happily. She could not wait to play again tomorrow.",
+    content:
+      'After school, Emma and her friends went to the playground. They decided to play tag. Emma was "it" first. She ran behind her friends, laughing as she tried to catch them. Tom climbed the slide to avoid being tagged, but Emma reached him and tapped his shoulder. Then, Emma tagged Maria, who squealed and started chasing the others. The sun began to set, and their parents called them home. Emma said goodbye to her friends and walked home happily. She could not wait to play again tomorrow.',
     difficulty: "beginner",
-    words: 87
+    words: 87,
   },
   {
     id: "story-25",
     title: "The Friendly Neighbor",
-    content: "One afternoon, Mr. Tan moved into the house next door to Amy. Amy saw him carrying boxes alone. She offered to help. Together, they carried furniture and unpacked items in the living room. Mr. Tan thanked Amy with a warm smile. He invited her in for lemonade. They sat at the table, sipping lemonade and talking about their families. Amy learned that Mr. Tan loved gardening. The next day, he gave her a small potted plant as a gift. Amy felt happy to have a new friend. She watered the plant every morning.",
+    content:
+      "One afternoon, Mr. Tan moved into the house next door to Amy. Amy saw him carrying boxes alone. She offered to help. Together, they carried furniture and unpacked items in the living room. Mr. Tan thanked Amy with a warm smile. He invited her in for lemonade. They sat at the table, sipping lemonade and talking about their families. Amy learned that Mr. Tan loved gardening. The next day, he gave her a small potted plant as a gift. Amy felt happy to have a new friend. She watered the plant every morning.",
     difficulty: "beginner",
-    words: 93
+    words: 93,
   },
   {
     id: "story-26",
     title: "The Birthday Card",
-    content: "Oliver wanted to make a special card for his grandmother's birthday. He took out colored paper, markers, and stickers. First, he folded the paper in half. Then, he drew flowers and wrote, \"Happy Birthday, Grandma!\" inside. He added glitter and a small photo of them together. On the morning of her birthday, he gave her the card. His grandmother opened it and smiled with joy. She hugged Oliver and put the card on the mantel. Oliver felt proud that his gift made her happy.",
+    content:
+      'Oliver wanted to make a special card for his grandmother\'s birthday. He took out colored paper, markers, and stickers. First, he folded the paper in half. Then, he drew flowers and wrote, "Happy Birthday, Grandma!" inside. He added glitter and a small photo of them together. On the morning of her birthday, he gave her the card. His grandmother opened it and smiled with joy. She hugged Oliver and put the card on the mantel. Oliver felt proud that his gift made her happy.',
     difficulty: "beginner",
-    words: 84
+    words: 84,
   },
   {
     id: "story-27",
@@ -301,34 +334,34 @@ By the end of the month-long exhibit, the museum reported a twenty percent incre
     title: "The Neural Network Architect",
     content: `Dr. Elena Wu spearheaded the development of a novel neural transformer architecture tailored to low-resource languages. She integrated sparse attention mechanisms with dynamic routing protocols to reduce computational overhead while preserving representational fidelity. During training, the model exhibited gradient instabilities, so Elena implemented adaptive learning rate schedulers and gradient clipping strategies to mitigate exploding gradients. She further introduced a custom tokenization pipeline that leveraged subword regularization to enhance vocabulary coverage across morphologically rich languages. After conducting ablation studies, Elena observed a 12% improvement in BLEU scores and a significant reduction in inference latency. She documented the architecture’s specifications, hyperparameter configurations, and performance benchmarks. Her publication in the Journal of Computational Linguistics catalyzed further research into efficient transformer variants for underrepresented language communities.`,
     difficulty: "advanced",
-    words: 122
+    words: 122,
   },
   {
     id: "story-33",
     title: "The Nanorobot Deployment",
     content: `In a state-of-the-art nanofabrication facility, Dr. Rajiv Malhotra orchestrated the deployment of autonomous nanorobots for targeted drug delivery in oncological models. Each nanorobot was engineered with a lipid-polymer hybrid shell conjugated to tumor-specific antibodies, enabling precise cellular docking. Rajiv calibrated the magnetically actuated propulsion system to navigate complex microvascular networks, ensuring optimal tissue penetration. However, early in vivo trials revealed unintended aggregation in hepatic sinusoids. He revised the surface charge density by modulating polyethylene glycol chain lengths, which mitigated aggregation and preserved circulation half-life. Subsequent fluorescence microscopy confirmed selective accumulation within tumor spheroids and minimal off-target retention. Rajiv compiled his methodology—including synthesis protocols, dynamic light scattering analyses, and pharmacokinetic profiles—for submission to the journal Nanomedicine, laying the groundwork for translational clinical studies.`,
     difficulty: "advanced",
-    words: 123
+    words: 123,
   },
   {
     id: "story-34",
     title: "The Macroeconomic Model",
     content: `Dr. Simone Alvarez developed an advanced dynamic stochastic general equilibrium (DSGE) model to analyze monetary policy under financial frictions. She incorporated heterogeneous agents with binding borrowing constraints and endogenous labor-leisure decisions, ensuring the model captured distributional effects. Simone calibrated the model using Bayesian estimation with Markov Chain Monte Carlo algorithms, fitting macroeconomic time series on consumption, investment, and inflation. During stress tests, the model predicted nonlinear responses to policy shocks, including occasional liquidity traps and regime shifts in interest rate rules. Simone published impulse response functions illustrating the differential impacts on high- and low-income cohorts. Her work, featured in the Journal of Economic Theory, provided policymakers with nuanced insights into stabilizing output and controlling inflation without exacerbating inequality.`,
     difficulty: "advanced",
-    words: 117
+    words: 117,
   },
   {
     id: "story-35",
     title: "The Cybersecurity Intrusion",
     content: `At the cybersecurity operations center, lead analyst Zoe Chen detected anomalous network traffic patterns indicative of an advanced persistent threat (APT). She correlated endpoint telemetry, firewall logs, and intrusion detection alerts to trace a stealthy lateral movement across segmented VLANs. Upon isolating the compromised node, Zoe deployed honeypot decoys and reverse-engineered the attacker’s custom payload to identify the command-and-control infrastructure. She then wrote custom Snort rules and updated the enterprise IDS signatures to block further exploitation. To remediate, Zoe orchestrated a rolling patch deployment, applying critical fixes to the vulnerable servers. She conducted a post-incident forensics analysis, preserving volatile memory and reconstructing the attack timeline. Her detailed report—complete with kill chain diagrams and mitigation recommendations—enhanced the organization’s threat-hunting capabilities and informed the revision of the incident response plan.`,
     difficulty: "advanced",
-    words: 128
+    words: 128,
   },
   {
     id: "story-36",
     title: "The Fusion Reactor Breakthrough",
     content: `Chief plasma physicist Dr. Mateo Ruiz observed anomalous oscillatory modes in the superconducting tokamak’s magnetic confinement field. The device had previously suffered rapid energy losses due to edge-localized modes (ELMs) that destabilized the plasma boundary. Ruiz collaborated with control systems engineers to integrate real-time feedback loops using neural network-based controllers trained on historical discharge data. The adaptive control algorithm modulated resonant magnetic perturbations to suppress ELMs without reducing the reactor’s thermal output. During a high-power test, the reactor maintained stable plasma at a temperature exceeding 150 million Kelvin for over ten minutes—setting a new record for confinement duration. Ruiz published his findings in Fusion Science and Technology and proposed scaling the approach to next-generation DEMO reactors.`,
     difficulty: "advanced",
-    words: 116
-  }
+    words: 116,
+  },
 ];

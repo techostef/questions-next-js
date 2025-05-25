@@ -89,3 +89,139 @@ export const cleanUpResult = (data: APIResponse) => {
     return null;
   }
 };
+
+export function findMistakes(original, test) {
+  // Helper function to clean and split text into words
+  const clean = (str) =>
+    str
+      .toLowerCase()
+      .replace(/[.,!?;:"']/g, "") // remove punctuation
+      .split(/\s+/) // split by any whitespace
+      .filter((w) => w.length > 0); // remove empty strings
+
+  const originalWords = clean(original);
+  const testWords = clean(test);
+
+  // Use Levenshtein distance to find best alignment
+  const results = findBestAlignment(originalWords, testWords);
+  return results;
+}
+
+export function findBestAlignment(originalWords: string[], testWords: string[]) {
+  // Use dynamic programming to find the best alignment
+  const mistakes = [];
+  let i = 0;
+  let j = 0;
+
+  // Track previous matches to detect substitution patterns
+  const substitutions = {};
+
+  while (i < originalWords.length && j < testWords.length) {
+    if (originalWords[i] === testWords[j]) {
+      // Words match exactly
+      i++;
+      j++;
+    } else if (
+      j + 1 < testWords.length &&
+      originalWords[i] === testWords[j + 1]
+    ) {
+      // Extra word in test - skip it
+      j++;
+    } else if (
+      i + 1 < originalWords.length &&
+      originalWords[i + 1] === testWords[j]
+    ) {
+      // Missing word in test
+      mistakes.push({
+        index: i,
+        word: originalWords[i],
+        type: "missing",
+        context: getContext(originalWords, i),
+      });
+      i++;
+    } else {
+      // Word substitution - check for phonetic or semantic similarity
+      if (areSimilarWords(originalWords[i], testWords[j])) {
+        // Similar but not exact match
+        substitutions[originalWords[i]] = testWords[j];
+        mistakes.push({
+          index: i,
+          word: originalWords[i],
+          type: "substitution",
+          replacement: testWords[j],
+          context: getContext(originalWords, i),
+        });
+      } else {
+        // Completely different words
+        mistakes.push({
+          index: i,
+          word: originalWords[i],
+          type: "missing",
+          context: getContext(originalWords, i),
+        });
+      }
+      i++;
+      j++;
+    }
+  }
+
+  // Add remaining missing words from original
+  while (i < originalWords.length) {
+    mistakes.push({
+      index: i,
+      word: originalWords[i],
+      type: "missing",
+      context: getContext(originalWords, i),
+    });
+    i++;
+  }
+
+  return mistakes;
+}
+
+// Check if words are similar (could be expanded with more sophisticated checks)
+export function areSimilarWords(word1: string, word2: string) {
+  // Simple character-based similarity
+  const similarity = calculateSimilarity(word1, word2);
+  return similarity > 0.5; // Threshold for similarity
+}
+
+// Calculate string similarity ratio using Levenshtein distance
+export function calculateSimilarity(s1: string, s2: string) {
+  if (s1.length === 0 || s2.length === 0) return 0;
+
+  // Calculate Levenshtein distance
+  const track = Array(s2.length + 1)
+    .fill(null)
+    .map(() => Array(s1.length + 1).fill(null));
+
+  for (let i = 0; i <= s1.length; i += 1) {
+    track[0][i] = i;
+  }
+
+  for (let j = 0; j <= s2.length; j += 1) {
+    track[j][0] = j;
+  }
+
+  for (let j = 1; j <= s2.length; j += 1) {
+    for (let i = 1; i <= s1.length; i += 1) {
+      const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      track[j][i] = Math.min(
+        track[j][i - 1] + 1, // deletion
+        track[j - 1][i] + 1, // insertion
+        track[j - 1][i - 1] + indicator // substitution
+      );
+    }
+  }
+
+  const distance = track[s2.length][s1.length];
+  const maxLength = Math.max(s1.length, s2.length);
+  return maxLength > 0 ? (maxLength - distance) / maxLength : 1;
+}
+
+// Get context around a word to help identify its position
+function getContext(words: string[], index: number, windowSize = 2) {
+  const start = Math.max(0, index - windowSize);
+  const end = Math.min(words.length, index + windowSize + 1);
+  return words.slice(start, end).join(" ");
+}
