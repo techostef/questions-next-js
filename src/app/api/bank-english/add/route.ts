@@ -105,21 +105,6 @@ export async function POST(request: Request) {
     // Add new words to the list
     const updatedWordList = [...wordList, ...newWords];
     
-    // Format date in Jakarta timezone (UTC+7)
-    const jakartaTime = new Date();
-    jakartaTime.setHours(jakartaTime.getHours() + 7);
-    const jakartaTimeString = jakartaTime.toISOString().replace('Z', '+07:00');
-    
-    // Prepare gist update data
-    const updateData = {
-      description: `Word dictionary updated on ${jakartaTimeString}`,
-      files: {
-        'bankenglish.json': {
-          content: JSON.stringify(updatedWordList)
-        }
-      }
-    };
-    
     // Update the gist
     const githubToken = process.env.GIT_UPDATE_SECRET;
     
@@ -130,7 +115,7 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
     
-    await updateGist(GIST_ID, 'bankenglish.json', JSON.stringify(updateData));
+    await updateGist(GIST_ID, 'bankenglish.json', updatedWordList);
     
     return NextResponse.json({
       success: true,

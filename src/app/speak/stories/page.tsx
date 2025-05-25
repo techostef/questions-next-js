@@ -8,7 +8,7 @@ import { Sound } from "@/assets/sound";
 // Mic component is now used in StoryReader
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 // No longer using speech recognition directly - now using StoryReader component
-import StoryReader from '@/app/feature/StoryReader';
+import StoryReader from "@/app/feature/StoryReader";
 import Dialog from "@/components/Dialog";
 import { TABS } from "../constants";
 import { STORIES } from "./mockData";
@@ -47,7 +47,7 @@ interface ReadingAttempt {
 
 interface MissedWord {
   index: number;
-  word: string
+  word: string;
 }
 
 function findMistakes(original, test) {
@@ -57,7 +57,7 @@ function findMistakes(original, test) {
       .toLowerCase()
       .replace(/[.,!?;:"']/g, "") // remove punctuation
       .split(/\s+/) // split by any whitespace
-      .filter(w => w.length > 0); // remove empty strings
+      .filter((w) => w.length > 0); // remove empty strings
 
   const originalWords = clean(original);
   const testWords = clean(test);
@@ -72,25 +72,31 @@ function findBestAlignment(originalWords, testWords) {
   const mistakes = [];
   let i = 0;
   let j = 0;
-  
+
   // Track previous matches to detect substitution patterns
   const substitutions = {};
-  
+
   while (i < originalWords.length && j < testWords.length) {
     if (originalWords[i] === testWords[j]) {
       // Words match exactly
       i++;
       j++;
-    } else if (j + 1 < testWords.length && originalWords[i] === testWords[j + 1]) {
+    } else if (
+      j + 1 < testWords.length &&
+      originalWords[i] === testWords[j + 1]
+    ) {
       // Extra word in test - skip it
       j++;
-    } else if (i + 1 < originalWords.length && originalWords[i + 1] === testWords[j]) {
+    } else if (
+      i + 1 < originalWords.length &&
+      originalWords[i + 1] === testWords[j]
+    ) {
       // Missing word in test
       mistakes.push({
         index: i,
         word: originalWords[i],
-        type: 'missing',
-        context: getContext(originalWords, i)
+        type: "missing",
+        context: getContext(originalWords, i),
       });
       i++;
     } else {
@@ -101,35 +107,35 @@ function findBestAlignment(originalWords, testWords) {
         mistakes.push({
           index: i,
           word: originalWords[i],
-          type: 'substitution',
+          type: "substitution",
           replacement: testWords[j],
-          context: getContext(originalWords, i)
+          context: getContext(originalWords, i),
         });
       } else {
         // Completely different words
         mistakes.push({
           index: i,
           word: originalWords[i],
-          type: 'missing',
-          context: getContext(originalWords, i)
+          type: "missing",
+          context: getContext(originalWords, i),
         });
       }
       i++;
       j++;
     }
   }
-  
+
   // Add remaining missing words from original
   while (i < originalWords.length) {
     mistakes.push({
       index: i,
       word: originalWords[i],
-      type: 'missing',
-      context: getContext(originalWords, i)
+      type: "missing",
+      context: getContext(originalWords, i),
     });
     i++;
   }
-  
+
   return mistakes;
 }
 
@@ -143,30 +149,31 @@ function areSimilarWords(word1, word2) {
 // Calculate string similarity ratio using Levenshtein distance
 function calculateSimilarity(s1, s2) {
   if (s1.length === 0 || s2.length === 0) return 0;
-  
+
   // Calculate Levenshtein distance
-  const track = Array(s2.length + 1).fill(null).map(() => 
-    Array(s1.length + 1).fill(null));
-  
+  const track = Array(s2.length + 1)
+    .fill(null)
+    .map(() => Array(s1.length + 1).fill(null));
+
   for (let i = 0; i <= s1.length; i += 1) {
     track[0][i] = i;
   }
-  
+
   for (let j = 0; j <= s2.length; j += 1) {
     track[j][0] = j;
   }
-  
+
   for (let j = 1; j <= s2.length; j += 1) {
     for (let i = 1; i <= s1.length; i += 1) {
       const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
       track[j][i] = Math.min(
         track[j][i - 1] + 1, // deletion
         track[j - 1][i] + 1, // insertion
-        track[j - 1][i - 1] + indicator, // substitution
+        track[j - 1][i - 1] + indicator // substitution
       );
     }
   }
-  
+
   const distance = track[s2.length][s1.length];
   const maxLength = Math.max(s1.length, s2.length);
   return maxLength > 0 ? (maxLength - distance) / maxLength : 1;
@@ -176,7 +183,7 @@ function calculateSimilarity(s1, s2) {
 function getContext(words, index, windowSize = 2) {
   const start = Math.max(0, index - windowSize);
   const end = Math.min(words.length, index + windowSize + 1);
-  return words.slice(start, end).join(' ');
+  return words.slice(start, end).join(" ");
 }
 
 export default function StoriesPage() {
@@ -196,74 +203,85 @@ export default function StoriesPage() {
   const [isStoryDialogOpen, setIsStoryDialogOpen] = useState(false);
   const [isAddStoryDialogOpen, setIsAddStoryDialogOpen] = useState(false);
   const [isLoading] = useState(false);
-  const [newStory, setNewStory] = useState<Partial<Story>>({ 
-    id: `story-${Date.now()}`, 
-    title: "", 
-    content: "", 
-    difficulty: "beginner" 
+  const [newStory, setNewStory] = useState<Partial<Story>>({
+    id: `story-${Date.now()}`,
+    title: "",
+    content: "",
+    difficulty: "beginner",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [submitMessage, setSubmitMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
-    // Story content ref for scrolling
+  // Story content ref for scrolling
   const storyContentRef = useRef<HTMLDivElement>(null);
-  
+
   // Speech synthesis for reading the story
   const { speak, stop } = useSpeechSynthesis();
-  
+
   // Define state to track recording status (replaced speech recognition)
   const [isRecording, setIsRecording] = useState(false);
   const [isSupported] = useState(true); // Assume supported by default
-  
+
   // Listen for errors from the StoryReader component
   // The StoryReader component will handle its own errors internally
 
   // Function to split story content into parts (paragraphs)
   const splitStoryIntoParts = useCallback((content: string) => {
     // Split by paragraphs (empty lines)
-    const paragraphs = content.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 0);
-    
+    const paragraphs = content
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+
     // If no paragraphs are found, treat the whole content as one part
     if (paragraphs.length === 0) {
-      return [{
-        part: 1,
-        content: content,
-        words: content.split(/\s+/).filter(word => word.length > 0).length
-      }];
+      return [
+        {
+          part: 1,
+          content: content,
+          words: content.split(/\s+/).filter((word) => word.length > 0).length,
+        },
+      ];
     }
-    
+
     // Create story parts from paragraphs
     return paragraphs.map((paragraph, index) => ({
       part: index + 1,
       content: paragraph,
-      words: paragraph.split(/\s+/).filter(word => word.length > 0).length
+      words: paragraph.split(/\s+/).filter((word) => word.length > 0).length,
     }));
   }, []);
   // Test the improved algorithm with the example sentences
   const testFindMistakes = () => {
     const originalText = `Yesterday, I had an interview with a team based in the Philippines. Initially, I thought I was rejected because they abruptly left the meeting without notifying me, but they later emailed me to reschedule.`;
     const testText = `yesterday I had an interview with a team based in the Philippines initially I thought I was rejected because they are probably left the meeting without notifying me but the letter emailed me to reschedule`;
-    
+
     const mistakes = findMistakes(originalText, testText);
-    
+
     return mistakes;
   };
-  
+
   // Run the test once on component initialization
   useEffect(() => {
     testFindMistakes();
   }, []);
 
-  // Custom setter for selected story that also caches 
-  const setSelectedStoryWithCache = useCallback((story: Story) => {
-    setSelectedStory(story);
-    localStorage.setItem("selectedStoryId", story.id);
-    
-    // Split the story into parts
-    const parts = splitStoryIntoParts(story.content);
-    setStoryParts(parts);
-    setSelectedPartIndex(0);
-  }, [splitStoryIntoParts]);
+  // Custom setter for selected story that also caches
+  const setSelectedStoryWithCache = useCallback(
+    (story: Story) => {
+      setSelectedStory(story);
+      localStorage.setItem("selectedStoryId", story.id);
+
+      // Split the story into parts
+      const parts = splitStoryIntoParts(story.content);
+      setStoryParts(parts);
+      setSelectedPartIndex(0);
+    },
+    [splitStoryIntoParts]
+  );
 
   // Fetch stories from API
   const fetchStories = useCallback(async () => {
@@ -304,7 +322,7 @@ export default function StoriesPage() {
   const loadSelectedStory = useCallback(async () => {
     try {
       const storiesData = await fetchStories();
-      
+
       const savedStoryId = localStorage.getItem("selectedStoryId");
       if (savedStoryId) {
         const story = storiesData.find((s: Story) => s.id === savedStoryId);
@@ -321,7 +339,7 @@ export default function StoriesPage() {
       console.error("Error loading selected story:", error);
     }
   }, [fetchStories, setSelectedStoryWithCache]);
-  
+
   // Load reading attempts and selected story from localStorage
   useEffect(() => {
     loadReadingAttempts();
@@ -330,30 +348,27 @@ export default function StoriesPage() {
   }, [loadReadingAttempts, loadSelectedStory]);
 
   // Save reading attempt to localStorage
-  const saveReadingAttempt = useCallback(
-    (attempt: ReadingAttempt) => {
-      try {
-        // Get existing attempts
-        const existingData = localStorage.getItem("readingAttempts");
-        const attempts = existingData ? JSON.parse(existingData) : [];
-        
-        // Add new attempt
-        attempts.push(attempt);
-        
-        // Save back to localStorage (keep only last 50 attempts)
-        localStorage.setItem(
-          "readingAttempts",
-          JSON.stringify(attempts.slice(-50))
-        );
-        
-        // Update state
-        setReadingAttempts(attempts);
-      } catch (error) {
-        console.error("Error saving reading attempt:", error);
-      }
-    },
-    []
-  );
+  const saveReadingAttempt = useCallback((attempt: ReadingAttempt) => {
+    try {
+      // Get existing attempts
+      const existingData = localStorage.getItem("readingAttempts");
+      const attempts = existingData ? JSON.parse(existingData) : [];
+
+      // Add new attempt
+      attempts.push(attempt);
+
+      // Save back to localStorage (keep only last 50 attempts)
+      localStorage.setItem(
+        "readingAttempts",
+        JSON.stringify(attempts.slice(-50))
+      );
+
+      // Update state
+      setReadingAttempts(attempts);
+    } catch (error) {
+      console.error("Error saving reading attempt:", error);
+    }
+  }, []);
 
   // Process speech for word matching
   const processSpeech = useCallback(
@@ -385,8 +400,10 @@ export default function StoriesPage() {
 
       // For each word in the story, check if it's not in the missed words
       storyWords.forEach((word, index) => {
-        const isMissed = listMissedWords.some((missed) => missed.index === index);
-        
+        const isMissed = listMissedWords.some(
+          (missed) => missed.index === index
+        );
+
         if (!isMissed) {
           storyWordsMatched.add(index);
           matchedWordsWithTimestamp.push({
@@ -401,20 +418,25 @@ export default function StoriesPage() {
       // This ensures that our UI shows the correct values
       setMissedWords(listMissedWords);
       setMatchedWords(matchedWordsWithTimestamp);
-      
+
       // Calculate accuracy based on matched words
-      const accuracy = storyWords.length > 0
-        ? Math.round((storyWordsMatched.size / storyWords.length) * 100)
-        : 0;
-      
+      const accuracy =
+        storyWords.length > 0
+          ? Math.round((storyWordsMatched.size / storyWords.length) * 100)
+          : 0;
+
       // Always update accuracy
       setAccuracy(accuracy);
 
-      return { accuracy, missedWords: listMissedWords, matchedWords: matchedWordsWithTimestamp };
+      return {
+        accuracy,
+        missedWords: listMissedWords,
+        matchedWords: matchedWordsWithTimestamp,
+      };
     },
     [selectedStory, storyParts, selectedPartIndex]
   );
-  
+
   // This is now handled by the StoryReader component's onTranscriptReceived callback
 
   // Function to clear reading history
@@ -439,31 +461,41 @@ export default function StoriesPage() {
   // as it might be needed for backward compatibility or future use
 
   // Process final results
-  const processResults = useCallback((userSpeech: string) => {
-    if (userSpeech.trim().length > 0) {
-      // Get accuracy based on missed words
-      const finalResults = processSpeech(userSpeech);
-      
-      // Calculate duration (just an example, in a real app this would be more accurate)
-      const duration = matchedWords.length > 0 
-        ? matchedWords[matchedWords.length - 1].timestamp - matchedWords[0].timestamp 
-        : 0;
+  const processResults = useCallback(
+    (userSpeech: string) => {
+      if (userSpeech.trim().length > 0) {
+        // Get accuracy based on missed words
+        const finalResults = processSpeech(userSpeech);
 
-      // Save reading attempt
-      saveReadingAttempt({
-        storyId: selectedStory?.id || "",
-        date: Date.now(),
-        accuracy: finalResults.accuracy,
-        duration,
-        missedWords: missedWords,
-        matchedWords: matchedWords
-      });
+        // Calculate duration (just an example, in a real app this would be more accurate)
+        const duration =
+          matchedWords.length > 0
+            ? matchedWords[matchedWords.length - 1].timestamp -
+              matchedWords[0].timestamp
+            : 0;
 
-      setShowResults(true);
-    }
-  }, [selectedStory?.id, processSpeech, saveReadingAttempt, matchedWords, missedWords]);
+        // Save reading attempt
+        saveReadingAttempt({
+          storyId: selectedStory?.id || "",
+          date: Date.now(),
+          accuracy: finalResults.accuracy,
+          duration,
+          missedWords: missedWords,
+          matchedWords: matchedWords,
+        });
 
-  
+        setShowResults(true);
+      }
+    },
+    [
+      selectedStory?.id,
+      processSpeech,
+      saveReadingAttempt,
+      matchedWords,
+      missedWords,
+    ]
+  );
+
   useEffect(() => {
     if (userSpeech.trim().length > 0) {
       processResults(userSpeech);
@@ -476,21 +508,27 @@ export default function StoriesPage() {
   // Keeping it defined but unused for now as we transition to the new recording method
 
   // Set the selected part index and save to localStorage
-  const setPartIndexWithCache = useCallback((index: number) => {
-    if (index >= 0 && index < storyParts.length) {
-      setSelectedPartIndex(index);
-      try {
-        localStorage.setItem("selectedPartIndex", index.toString());
-      } catch (error) {
-        console.error("Error saving selected part index:", error);
+  const setPartIndexWithCache = useCallback(
+    (index: number) => {
+      if (index >= 0 && index < storyParts.length) {
+        setSelectedPartIndex(index);
+        try {
+          localStorage.setItem("selectedPartIndex", index.toString());
+        } catch (error) {
+          console.error("Error saving selected part index:", error);
+        }
       }
-    }
-  }, [storyParts.length]);
+    },
+    [storyParts.length]
+  );
 
   // Play the selected story part using text-to-speech
   const playStory = useCallback(() => {
     setIsReading(true);
-    const contentToRead = storyParts.length > 0 ? storyParts[selectedPartIndex].content : selectedStory?.content || "";
+    const contentToRead =
+      storyParts.length > 0
+        ? storyParts[selectedPartIndex].content
+        : selectedStory?.content || "";
     speak(contentToRead, false);
   }, [selectedPartIndex, selectedStory?.content, speak, storyParts]);
 
@@ -502,9 +540,9 @@ export default function StoriesPage() {
 
   // Generate highlighted text with matched and missed words
   const getHighlightedText = useCallback(() => {
-    if (!showResults || !selectedStory || storyParts.length === 0) 
+    if (!showResults || !selectedStory || storyParts.length === 0)
       return selectedStory?.content || "";
-      
+
     const contentToHighlight = storyParts[selectedPartIndex].content;
 
     const normalizeText = (text: string) => {
@@ -523,21 +561,23 @@ export default function StoriesPage() {
       .split(/\b/)
       .map((part) => {
         const normalized = normalizeText(part);
-        const skipMatch = !normalized  || normalized.length < 2
-        const skipWord = normalized === ', ' || normalized === ','
-        const excludeSkip = normalized !== 'a' && normalized !== 'i' 
+        const skipMatch = !normalized || normalized.length < 2;
+        const skipWord = normalized === ", " || normalized === ",";
+        const excludeSkip = normalized !== "a" && normalized !== "i";
         if (skipWord) return part;
         if (skipMatch && excludeSkip) return part;
         indexWord++;
 
-        const findMissedWord = missedWords.find((_value, index) => indexWord === index);
+        const findMissedWord = missedWords.find(
+          (_value, index) => indexWord === index
+        );
         if (findMissedWord?.word === normalized) {
           return `<span class="text-red-500 font-bold">${part}</span>`;
         }
 
         const userWord = userSpeechWords[indexWord];
         if (!userWord) {
-          return part
+          return part;
         }
         if (userWord === normalized) {
           return `<span class="text-green-500">${part}</span>`;
@@ -546,7 +586,14 @@ export default function StoriesPage() {
         }
       })
       .join("");
-  }, [selectedStory, missedWords, showResults, userSpeech, storyParts, selectedPartIndex]);
+  }, [
+    selectedStory,
+    missedWords,
+    showResults,
+    userSpeech,
+    storyParts,
+    selectedPartIndex,
+  ]);
 
   // Reset the reading practice
   const resetReading = useCallback(() => {
@@ -559,49 +606,56 @@ export default function StoriesPage() {
   const handleAddStory = async () => {
     // Validate form
     if (!newStory.title || !newStory.content) {
-      setSubmitMessage({ type: 'error', text: 'Please fill in all required fields' });
+      setSubmitMessage({
+        type: "error",
+        text: "Please fill in all required fields",
+      });
       return;
     }
-    
+
     setIsSubmitting(true);
     setSubmitMessage(null);
-    
+
     try {
       // Create a complete story object
       const storyToAdd: Story = {
         id: newStory.id || `story-${Date.now()}`,
         title: newStory.title,
         content: newStory.content,
-        difficulty: newStory.difficulty || 'beginner',
-        words: newStory.content.split(/\s+/).filter(word => word.length > 0).length
+        difficulty: newStory.difficulty || "beginner",
+        words: newStory.content.split(/\s+/).filter((word) => word.length > 0)
+          .length,
       };
-      
+
       // Send to API
-      const response = await fetch('/api/stories/add', {
-        method: 'POST',
+      const response = await fetch("/api/stories/add", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ story: storyToAdd })
+        body: JSON.stringify({ story: storyToAdd }),
       });
-      
+
       const data = await response.json();
-      
+
       if (response.ok) {
         // Success - add to local stories and select it
-        setStories(prevStories => [...prevStories, storyToAdd]);
+        setStories((prevStories) => [...prevStories, storyToAdd]);
         setSelectedStoryWithCache(storyToAdd);
-        
+
         // Reset form
-        setNewStory({ 
-          id: `story-${Date.now()}`, 
-          title: "", 
-          content: "", 
-          difficulty: "beginner" 
+        setNewStory({
+          id: `story-${Date.now()}`,
+          title: "",
+          content: "",
+          difficulty: "beginner",
         });
-        
-        setSubmitMessage({ type: 'success', text: 'Story added successfully!' });
-        
+
+        setSubmitMessage({
+          type: "success",
+          text: "Story added successfully!",
+        });
+
         // Close dialog after a delay
         setTimeout(() => {
           setIsAddStoryDialogOpen(false);
@@ -609,11 +663,17 @@ export default function StoriesPage() {
         }, 1500);
       } else {
         // Error
-        setSubmitMessage({ type: 'error', text: data.error || 'Failed to add story' });
+        setSubmitMessage({
+          type: "error",
+          text: data.error || "Failed to add story",
+        });
       }
     } catch (error) {
-      console.error('Error adding story:', error);
-      setSubmitMessage({ type: 'error', text: 'An error occurred while adding the story' });
+      console.error("Error adding story:", error);
+      setSubmitMessage({
+        type: "error",
+        text: "An error occurred while adding the story",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -649,60 +709,100 @@ export default function StoriesPage() {
                         setIsStoryDialogOpen(true);
                       }
                     }}
-                    className={`px-4 py-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors ${isRecording || isReading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`px-4 py-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors ${
+                      isRecording || isReading
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
                     disabled={isRecording || isReading}
                   >
                     Change Story
                   </button>
                 </div>
               </div>
-              
+
               {/* Current story card */}
               <div className="p-4 border rounded-lg border-blue-500 bg-blue-50">
                 <h3 className="font-medium text-lg">{selectedStory?.title}</h3>
                 <div className="flex justify-between mt-2">
                   <span
-                    className={`px-2 py-0.5 rounded ${selectedStory?.difficulty === "beginner" ? "bg-green-100 text-green-800" : selectedStory?.difficulty === "intermediate" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
+                    className={`px-2 py-0.5 rounded ${
+                      selectedStory?.difficulty === "beginner"
+                        ? "bg-green-100 text-green-800"
+                        : selectedStory?.difficulty === "intermediate"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
                   >
                     {selectedStory?.difficulty}
                   </span>
-                  <span className="text-gray-500">{selectedStory?.words} words</span>
+                  <span className="text-gray-500">
+                    {selectedStory?.words} words
+                  </span>
                 </div>
-                
+
                 {/* Story parts navigation */}
                 {storyParts.length > 1 && (
                   <div className="mt-4 border-t pt-3">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">Story Parts</span>
-                      <span className="text-xs text-gray-500">{selectedPartIndex + 1} of {storyParts.length}</span>
+                      <span className="text-xs text-gray-500">
+                        {selectedPartIndex + 1} of {storyParts.length}
+                      </span>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <button
-                        onClick={() => setPartIndexWithCache(selectedPartIndex - 1)}
-                        disabled={selectedPartIndex === 0 || isRecording || isReading}
-                        className={`px-2 py-1 rounded ${selectedPartIndex === 0 || isRecording || isReading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                        onClick={() =>
+                          setPartIndexWithCache(selectedPartIndex - 1)
+                        }
+                        disabled={
+                          selectedPartIndex === 0 || isRecording || isReading
+                        }
+                        className={`px-2 py-1 rounded ${
+                          selectedPartIndex === 0 || isRecording || isReading
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        }`}
                       >
                         ← Previous
                       </button>
-                      
+
                       <div className="flex space-x-1">
                         {storyParts.map((_, index) => (
                           <button
                             key={index}
                             onClick={() => setPartIndexWithCache(index)}
                             disabled={isRecording || isReading}
-                            className={`w-6 h-6 rounded-full text-xs flex items-center justify-center ${selectedPartIndex === index ? 'bg-blue-500 text-white' : isRecording || isReading ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                            className={`w-6 h-6 rounded-full text-xs flex items-center justify-center ${
+                              selectedPartIndex === index
+                                ? "bg-blue-500 text-white"
+                                : isRecording || isReading
+                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                            }`}
                           >
                             {index + 1}
                           </button>
                         ))}
                       </div>
-                      
+
                       <button
-                        onClick={() => setPartIndexWithCache(selectedPartIndex + 1)}
-                        disabled={selectedPartIndex === storyParts.length - 1 || isRecording || isReading}
-                        className={`px-2 py-1 rounded ${selectedPartIndex === storyParts.length - 1 || isRecording || isReading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                        onClick={() =>
+                          setPartIndexWithCache(selectedPartIndex + 1)
+                        }
+                        disabled={
+                          selectedPartIndex === storyParts.length - 1 ||
+                          isRecording ||
+                          isReading
+                        }
+                        className={`px-2 py-1 rounded ${
+                          selectedPartIndex === storyParts.length - 1 ||
+                          isRecording ||
+                          isReading
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                        }`}
                       >
                         Next →
                       </button>
@@ -711,7 +811,7 @@ export default function StoriesPage() {
                 )}
               </div>
             </div>
-            
+
             {/* Story selection dialog using the reusable Dialog component */}
             <Dialog
               isOpen={isStoryDialogOpen}
@@ -729,7 +829,7 @@ export default function StoriesPage() {
                 </div>
               }
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-2">
                 {isLoading ? (
                   <div className="flex justify-center items-center py-6">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -743,23 +843,31 @@ export default function StoriesPage() {
                         resetReading();
                         setIsStoryDialogOpen(false);
                       }}
-                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${selectedStory?.id === story.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"}`}
+                      className={`relative p-4 flex flex-col border rounded-lg cursor-pointer transition-colors ${
+                        selectedStory?.id === story.id
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-blue-300"
+                      }`}
                     >
-                      <h3 className="font-medium">{story.title}</h3>
-                      <div className="flex justify-between mt-2 text-sm">
-                        <span
-                          className={`px-2 py-0.5 rounded ${story.difficulty === "beginner" ? "bg-green-100 text-green-800" : story.difficulty === "intermediate" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
-                        >
-                          {story.difficulty}
-                        </span>
-                        <span className="text-gray-500">{story.words} words</span>
-                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded capitalize ${
+                          story.difficulty === "beginner"
+                            ? "bg-green-100 text-green-800"
+                            : story.difficulty === "intermediate"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {story.difficulty}
+                      </span>
+                      <h3 className="font-medium mt-2 mb-5">{story.title}</h3>
+                      <div className="text-gray-500 absolute right-5 bottom-2">{story.words} words</div>
                     </div>
                   ))
                 )}
               </div>
             </Dialog>
-            
+
             {/* Add Story Dialog */}
             <Dialog
               isOpen={isAddStoryDialogOpen}
@@ -770,7 +878,13 @@ export default function StoriesPage() {
                 <div className="flex justify-between w-full">
                   <div>
                     {submitMessage && (
-                      <div className={`text-sm ${submitMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                      <div
+                        className={`text-sm ${
+                          submitMessage.type === "success"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
                         {submitMessage.text}
                       </div>
                     )}
@@ -784,18 +898,33 @@ export default function StoriesPage() {
                     </button>
                     <button
                       onClick={handleAddStory}
-                      disabled={isSubmitting || !newStory.title || !newStory.content}
-                      className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${(isSubmitting || !newStory.title || !newStory.content) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={
+                        isSubmitting || !newStory.title || !newStory.content
+                      }
+                      className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${
+                        isSubmitting || !newStory.title || !newStory.content
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
                     >
-                      {isSubmitting ? 'Saving...' : 'Save Story'}
+                      {isSubmitting ? "Saving..." : "Save Story"}
                     </button>
                   </div>
                 </div>
               }
             >
-              <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleAddStory(); }}>
+              <form
+                className="space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAddStory();
+                }}
+              >
                 <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="title"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Title
                   </label>
                   <input
@@ -803,29 +932,45 @@ export default function StoriesPage() {
                     id="title"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={newStory.title}
-                    onChange={(e) => setNewStory({...newStory, title: e.target.value})}
+                    onChange={(e) =>
+                      setNewStory({ ...newStory, title: e.target.value })
+                    }
                     required
                   />
                 </div>
-                
+
                 <div>
-                  <label htmlFor="difficulty" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="difficulty"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Difficulty
                   </label>
                   <select
                     id="difficulty"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={newStory.difficulty}
-                    onChange={(e) => setNewStory({...newStory, difficulty: e.target.value as "beginner" | "intermediate" | "advanced"})}
+                    onChange={(e) =>
+                      setNewStory({
+                        ...newStory,
+                        difficulty: e.target.value as
+                          | "beginner"
+                          | "intermediate"
+                          | "advanced",
+                      })
+                    }
                   >
                     <option value="beginner">Beginner</option>
                     <option value="intermediate">Intermediate</option>
                     <option value="advanced">Advanced</option>
                   </select>
                 </div>
-                
+
                 <div>
-                  <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="content"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
                     Content
                   </label>
                   <textarea
@@ -833,15 +978,28 @@ export default function StoriesPage() {
                     rows={10}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={newStory.content}
-                    onChange={(e) => setNewStory({...newStory, content: e.target.value})}
+                    onChange={(e) =>
+                      setNewStory({ ...newStory, content: e.target.value })
+                    }
                     placeholder="Enter your story text here. Use blank lines to separate paragraphs."
                     required
                   />
                 </div>
-                
+
                 <div className="text-sm text-gray-500">
-                  <p>Word count: {newStory.content?.split(/\s+/).filter(word => word.length > 0).length || 0} words</p>
-                  <p>Paragraphs: {newStory.content?.split(/\n\s*\n/).filter(p => p.trim().length > 0).length || 0}</p>
+                  <p>
+                    Word count:{" "}
+                    {newStory.content
+                      ?.split(/\s+/)
+                      .filter((word) => word.length > 0).length || 0}{" "}
+                    words
+                  </p>
+                  <p>
+                    Paragraphs:{" "}
+                    {newStory.content
+                      ?.split(/\n\s*\n/)
+                      .filter((p) => p.trim().length > 0).length || 0}
+                  </p>
                 </div>
               </form>
             </Dialog>
@@ -861,8 +1019,8 @@ export default function StoriesPage() {
                 <span className="ml-2">Listen to Story</span>
               </button>
 
-              <StoryReader 
-                storyText={selectedStory?.content || ''}
+              <StoryReader
+                storyText={selectedStory?.content || ""}
                 onTranscriptReceived={(transcript) => {
                   setUserSpeech(transcript);
                   setIsRecording(false);
@@ -896,10 +1054,10 @@ export default function StoriesPage() {
             {/* Error message */}
             {(componentError || !isSupported) && (
               <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md">
-                {!isSupported ? 
-                  "Your browser doesn't support speech recognition. Try using Chrome or Edge." : 
-                  componentError}
-                <button 
+                {!isSupported
+                  ? "Your browser doesn't support speech recognition. Try using Chrome or Edge."
+                  : componentError}
+                <button
                   onClick={() => setComponentError(null)}
                   className="ml-2 underline text-blue-600 hover:text-blue-800"
                 >
@@ -956,9 +1114,14 @@ export default function StoriesPage() {
             <div className="relative">
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-lg font-medium">
-                  {selectedStory?.title} {storyParts.length > 1 && <span className="text-sm font-normal text-gray-500">- Part {selectedPartIndex + 1}</span>}
+                  {selectedStory?.title}{" "}
+                  {storyParts.length > 1 && (
+                    <span className="text-sm font-normal text-gray-500">
+                      - Part {selectedPartIndex + 1}
+                    </span>
+                  )}
                 </h3>
-                
+
                 {storyParts.length > 0 && (
                   <div className="text-sm text-gray-500">
                     {storyParts[selectedPartIndex].words} words
@@ -990,34 +1153,34 @@ export default function StoriesPage() {
                   <div
                     dangerouslySetInnerHTML={{ __html: getHighlightedText() }}
                   />
+                ) : storyParts.length > 0 ? (
+                  storyParts[selectedPartIndex].content
+                    .split("\n")
+                    .map((line, lineIndex) => (
+                      <p key={lineIndex} className="mb-2">
+                        {line.split(" ").map((word, wordIndex) => (
+                          <span
+                            key={`${lineIndex}-${wordIndex}`}
+                            className="inline-block mr-1"
+                          >
+                            {word}
+                          </span>
+                        ))}
+                      </p>
+                    ))
                 ) : (
-                  storyParts.length > 0 ? (
-                    storyParts[selectedPartIndex].content.split("\n").map((line, lineIndex) => (
-                      <p key={lineIndex} className="mb-2">
-                        {line.split(" ").map((word, wordIndex) => (
-                          <span
-                            key={`${lineIndex}-${wordIndex}`}
-                            className="inline-block mr-1"
-                          >
-                            {word}
-                          </span>
-                        ))}
-                      </p>
-                    ))
-                  ) : (
-                    selectedStory?.content.split("\n").map((line, lineIndex) => (
-                      <p key={lineIndex} className="mb-2">
-                        {line.split(" ").map((word, wordIndex) => (
-                          <span
-                            key={`${lineIndex}-${wordIndex}`}
-                            className="inline-block mr-1"
-                          >
-                            {word}
-                          </span>
-                        ))}
-                      </p>
-                    ))
-                  )
+                  selectedStory?.content.split("\n").map((line, lineIndex) => (
+                    <p key={lineIndex} className="mb-2">
+                      {line.split(" ").map((word, wordIndex) => (
+                        <span
+                          key={`${lineIndex}-${wordIndex}`}
+                          className="inline-block mr-1"
+                        >
+                          {word}
+                        </span>
+                      ))}
+                    </p>
+                  ))
                 )}
               </div>
             </div>
