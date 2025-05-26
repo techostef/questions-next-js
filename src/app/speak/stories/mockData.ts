@@ -364,4 +364,129 @@ By the end of the month-long exhibit, the museum reported a twenty percent incre
     difficulty: "advanced",
     words: 116,
   },
+  {
+    id: "story-37",
+    title: "The Accessibility Deep Dive",
+    content: `During his onsite interview at BrightUI Inc., candidate Rohan faced a detailed accessibility assessment. The panel asked him to demonstrate an ARIA-enabled accordion component with dynamic content loading. He explained how to manage focus, implement keyboard navigation, and leverage semantic HTML to ensure screen-reader compatibility. To illustrate, he live-coded a React hook integrating the WAI-ARIA guidelines, using useReducer to manage expanded state and a custom focus-management utility. Interviewers probed the test strategy: Rohan described unit tests with Jest and integration tests via Cypress, simulating keyboard events. They also discussed performance implications: how lazy-loading conditional panels reduces initial bundle size. The panel commended his holistic approach, blending code quality, accessibility best practices, and automated testing in a production-ready component.`,
+    difficulty: "advanced",
+    words: 119
+  },
+  {
+    id: "story-38",
+    title: "The Performance Audit",
+    content: `During her final technical interview at StreamFlow, senior frontend candidate Mei was presented with a legacy dashboard suffering from slow render times. Interviewers provided the unoptimized React code and profiling data from Chrome DevTools. Mei identified that excessive re-renders occurred due to missing memoization and large inline objects passed as props. She refactored the code by wrapping pure functional components in React.memo, extracting expensive computations into useMemo hooks, and debouncing input handlers using useCallback. Then, she updated the build configuration to implement code splitting with dynamic import(), reducing the initial payload by nearly 40 KB. Finally, she wrote Lighthouse audit scripts to measure improvements and documented each optimization step in a clear, time-stamped report. The panel praised her systematic diagnosis and measurable performance gains.`,
+    difficulty: "advanced",
+    words: 124
+  },
+  {
+    id: "story-39",
+    title: "The Micro-Frontend Debate",
+    content: `Interviewers at FrontEdge Inc. convened a whiteboard session to evaluate candidate Arun’s micro-frontend architecture proposal. He sketched a system decomposed by feature domains, each implemented as isolated React applications communicating via a shared event bus. Arun explained how to handle shared dependencies using Module Federation, avoiding duplicate React instances, and enabling independent deployments. When asked about routing across micro-frontends, he illustrated a global history synchronization mechanism using custom middleware in Redux Toolkit. The panel challenged him on performance trade-offs: Arun proposed leveraging preloading strategies and cache eviction policies in the service worker to optimize resource delivery. He also detailed automated integration tests with Playwright to validate cross-app navigation. The interview concluded with positive feedback on his strategic thinking and practical tooling choices.`,
+    difficulty: "advanced",
+    words: 122
+  },
+  {
+    id: "story-40",
+    title: "The Architectural Case Study",
+    content: `During the final round at ApexUI, senior frontend interviewee Sofia was asked to perform an architecture deep-dive on a hypothetical e-commerce platform. On the whiteboard, she outlined a component hierarchy extending from ProductList and ProductDetail pages to shared UI libraries for forms and modals. Sofia discussed state management across the application, contrasting Context API for light-weight data with Redux Toolkit for complex, cross-cutting concerns. She justified using React Query for server state caching and optimistic updates. When challenged about scalability, she sketched a module federation strategy for splitting the cart service into an independently deployable micro-frontend. To address styling consistency, Sofia proposed a design token system integrated via Tailwind CSS and a Storybook-driven component library. The panel rated her clarity, modular thinking, and emphasis on developer ergonomics highly.`,
+    difficulty: "advanced",
+    words: 128
+  },
+  {
+    id: "story-41",
+    title: "The Security Code Challenge",
+    content: `In the senior frontend interview at SecureBank, candidate Luis was tasked with securing a login form against common web vulnerabilities. On a live coding exercise, he implemented CSRF protection by integrating a rotating anti-forgery token in a custom React hook. He sanitized user input with DOMPurify to prevent XSS and configured Content Security Policy headers at the service worker level. When the interviewer introduced a simulated breach attempt, Luis debugged cross-site script injection by inspecting request payloads in the Network panel and adjusting his sanitization whitelist. He also described implementing HTTPS-only cookies with SameSite attributes and setting up HTTP Public Key Pinning. The interview concluded with a discussion on automated security testing using OWASP Zap and snapshot testing of the form’s DOM structure. The panel applauded his comprehensive security-first mindset.`,
+    difficulty: "advanced",
+    words: 130
+  },
+  {
+    id: "story-42",
+    title: "The Component Refactor Challenge",
+    content: `During his final technical interview at TechZen, candidate Jordan was presented with a complex UI component: a dynamic tabbed interface that fetched remote data on tab change. The interviewers provided the existing class-based React codebase and asked Jordan to optimize state management, improve error handling, and boost performance. Jordan began by converting the component to function components, introducing useEffect hooks to trigger API calls and cleanup subscriptions. He replaced local state logic with a useReducer hook to manage loading, success, and error states more predictably. He also demonstrated how to handle stale closures by including dependency arrays and cleanup functions.
+
+In the second half of the session, the panel requested a comprehensive test suite using React Testing Library and Jest. Jordan wrote tests to simulate tab clicks, mocked API responses with MSW, and asserted that loading indicators and error messages rendered correctly. To reduce bundle size, he implemented code splitting with React.lazy and Suspense for each tab panel and wrapped pure child components with React.memo to prevent unnecessary re-renders. When asked about concurrent React, he explained error boundaries, fallback UI, and the benefits of startTransition for non-urgent state updates.
+
+Finally, Jordan showed how he would integrate these changes into a CI pipeline by configuring GitHub Actions to run linting, tests, and performance audits on each pull request. The interviewers praised his end-to-end approach, noting his balance of clean code, robust testing, and deployment readiness.`,
+    difficulty: "intermediate",
+    words: 204
+  },
+  {
+    id: "story-43",
+    title: "The GraphQL vs REST Debate",
+    content: `At her mid-stage interview for a senior frontend role at DataFlow Labs, candidate Priya was tasked with designing a data-fetching architecture for a real-time analytics dashboard. The interviewers asked her to compare REST and GraphQL, considering factors like over-fetching, network efficiency, and caching. Priya explained that GraphQL offers precise data queries and built-in schema validation, reducing payload size, while REST benefits from simplicity, HTTP caching, and widespread tooling. She suggested using GraphQL for client-specific queries and REST for static resources to achieve a balanced approach.
+
+In the coding challenge segment, Priya implemented the chosen solution using Apollo Client in React. She set up query hooks to fetch paginated data, leveraged Apollo’s cache policies to merge incremental updates, and handled network errors with retry logic. To demonstrate performance optimization, she added pagination-based lazy loading and debounced filter inputs using useCallback. She also wrote unit tests for custom hooks with Jest and mocked GraphQL responses using graphql-tools.
+
+Finally, Priya described integrating the architecture into the CI/CD pipeline. She recommended running schema validation checks, type generation scripts, and performance linting in GitHub Actions before merging code. The interview panel praised her comprehensive reasoning, clear code, and strategic use of modern data-fetching patterns.`,
+    difficulty: "intermediate",
+    words: 201
+  },
+  {
+    id: "story-44",
+    title: "The Theming System Interview",
+    content: `During the front-end system design interview at NeoVista, senior candidate Aisha was asked to architect a theming system that supports dynamic light and dark modes across a large React application. The panel emphasized consistency, performance, and accessibility. Aisha proposed using CSS custom properties for color tokens, exposing them via a ThemeContext provider. She explained how these variables would cascade through styled-components theme objects or inline styles, ensuring minimal runtime overhead and easy integration with design tokens defined in a central JSON file.
+
+Next, the exercise required implementing runtime theme switching without a full page reload. Aisha demonstrated a custom hook, useTheme, which persisted user preferences in localStorage and applied the appropriate CSS variable overrides on the root element. She also integrated the Storybook theming add-on to preview components under different themes during development. To support server-side rendering, she described passing the theme preference through an HTTP header and hydrating it in the initial HTML payload.
+
+For testing, Aisha wrote end-to-end tests using Cypress to validate theme toggles and contrast ratios against WCAG guidelines. She added snapshot tests in Jest to detect unintended visual changes and profiled style recalculations in Chrome DevTools, identifying and eliminating forced synchronous layouts. The interviewers commended her thoughtful balance of developer ergonomics, accessibility standards, and runtime efficiency.`,
+    difficulty: "intermediate",
+    words: 198
+  },
+  {
+    id: "story-45",
+    title: "The Real‐Time Collaboration Feature",
+    content: `At the final on-site interview with SyncStack, senior frontend candidate Marcus was presented with a scenario: implement a real-time collaborative text editor for two users to edit the same document concurrently. The interviewers provided a basic React setup and a mock WebSocket server. Marcus first outlined the data flow: he would use a central Redux store to manage document state and integrate middleware to handle incoming and outgoing operations.
+
+During the coding exercise, Marcus implemented a custom hook, useWebSocket, that managed the socket connection lifecycle and dispatched user edits as delta operations. To minimize network traffic, he batched rapid keystrokes using a debounce mechanism and only transmitted diffs instead of the full text. He applied Operational Transformation (OT) logic to merge concurrent edits, ensuring consistency across clients. In the editor component, he used React.memo and virtualization for efficient rendering of large documents.
+
+Finally, the panel asked about offline support and error recovery. Marcus described using IndexedDB to queue unsent operations and resync upon reconnection. He wrote unit tests for the OT algorithm using Jest and end-to-end tests in Playwright to simulate two browser instances. The interviewers praised his robust design, attention to performance, and comprehensive testing strategy.`,
+    difficulty: "intermediate",
+    words: 200
+  },
+  {
+    id: "story-46",
+    title: "The Internationalization Challenge",
+    content: `During the senior frontend interview at GlobalTech, candidate Elena faced an internationalization challenge: extend an existing React application to support multiple locales and right-to-left (RTL) languages. The technical panel provided sample code with hardcoded strings and asked her to propose an i18n strategy. Elena recommended using react-intl to extract and manage translation messages, integrate message catalogs, and format dates and numbers according to locale.
+
+Next, she refactored one of the UI modules, wrapping text in <FormattedMessage> components and loading locale JSON files dynamically based on the user’s preferred language detected from the browser. She also implemented a language switcher that updated the React context, triggering a re-render on all components. For RTL support, she used CSS logical properties and set dir="rtl" on the document root, ensuring layout mirrored correctly without rewriting styles.
+
+Finally, the panel questioned how she would automate quality checks for missing translations. Elena configured a CI step using intl CLI tools to validate message consistency across locales and added snapshot tests in Jest to catch untranslated strings. When asked about performance, she described lazy-loading locale bundles with dynamic import() and gzipping translation files. The interviewers praised her clear i18n workflow, attention to RTL nuances, and integrated testing pipeline.`,
+    difficulty: "intermediate",
+    words: 203
+  },
+  {
+    id: "story-47",
+    title: "The First Interview",
+    content: `Tom had his first interview at a tech company. He wore his best shirt. He arrived early and met the recruiter. They asked him simple questions about HTML and CSS. Tom answered clearly. He showed his portfolio on his laptop. The interviewer liked his work. They asked about JavaScript. Tom talked about events and functions. At the end, they shook hands. Tom felt proud. He thanked them and left with a smile. He waited for a call the next week.`,
+    difficulty: "beginner",
+    words: 80,
+  },
+  {
+    id: "story-48",
+    title: "The Code Assignment",
+    content: `Lisa received a code assignment after her interview. The task asked her to build a button in React. She opened her editor and wrote code using JSX. She used onClick to handle clicks. She styled the button with simple CSS. She tested the button and saw it worked. She added a console log to show the click event. She felt happy with her work. Then she saved and sent the code. The interviewer thanked her and gave feedback the next day.`,
+    difficulty: "beginner",
+    words: 82,
+  },
+  {
+    id: "story-49",
+    title: "The Design Question",
+    content: `Mark sat with the interview panel. They showed him a website mockup. They asked how he would convert it to responsive design. Mark explained using CSS Flexbox and media queries. He drew a quick sketch on paper and wrote simple code examples. He mentioned using rem units and a mobile-first approach. He talked about testing on different devices. The panel nodded and asked follow-up questions. Mark answered confidently. After ten minutes, they thanked him and moved to the next topic. He felt proud at his clear answers.`,
+    difficulty: "beginner",
+    words: 86,
+  },
+  {
+    id: "story-50",
+    title: "The Take-Home Task",
+    content: `Anna completed a take-home task for a senior frontend role. The assignment asked her to build a simple form with validation. She created fields for name, email, and password in HTML. She added JavaScript to check input values and show error messages. She used CSS to style the form and display errors in red. She tested the form in Chrome and Firefox. She wrote a readme file explaining how to run the code. Then she zipped the folder and sent it by email. The recruiter replied with a positive note.`,
+    difficulty: "beginner",
+    words: 90,
+  },
+  {
+    id: "story-51",
+    title: "The Feedback Call",
+    content: `Daniel waited for a feedback call after his frontend interview. He answered a phone call the next day at noon. The recruiter told him he did well in coding questions and problem-solving. They also mentioned he needed to improve on CSS animations. Daniel thanked them for the advice. He asked for resources to learn more. The recruiter shared links to tutorials and articles. Daniel wrote the links in his notebook. He felt motivated to practice. Later, he studied the materials and coded sample animations. A week later, he secured the job offer.`,
+    difficulty: "beginner",
+    words: 92,
+  }
 ];
