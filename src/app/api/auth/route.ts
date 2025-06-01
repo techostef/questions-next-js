@@ -1,6 +1,15 @@
-export async function POST(req) {
+import { NextRequest } from 'next/server';
+
+export async function POST(req: NextRequest) {
   try {
+    // Access environment variables at runtime
     const usersJSON = process.env.USERS_JSON;
+    
+    // Log the environment variables for debugging (remove in production)
+    console.log('Environment variables check:', {
+      USERS_JSON_SET: process.env.USERS_JSON,
+    });
+    
     if (!usersJSON) {
       console.error('USERS_JSON environment variable is not set');
       return Response.json({ error: 'Server configuration error' }, { status: 500 });
