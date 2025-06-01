@@ -14,16 +14,30 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Set up environment variables for build
+# For Railway deployment
+# Copy existing .env.production file if it exists locally
+# COPY .env.production .env.production
+
+# For build-time environment variables
+# Railway automatically injects environment variables during build
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_SITE_URL
+ARG OPENAI_API_KEY
+ARG USERS_JSON
 
-# Create .env.production if env vars are provided
-RUN if [ -n "$NEXT_PUBLIC_API_URL" ]; then \
+# Create or append to .env.production with build args (for Next.js public vars)
+RUN touch .env.production && \
+    if [ -n "$NEXT_PUBLIC_API_URL" ]; then \
       echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL" >> .env.production; \
-    fi \
-    && if [ -n "$NEXT_PUBLIC_SITE_URL" ]; then \
+    fi && \
+    if [ -n "$NEXT_PUBLIC_SITE_URL" ]; then \
       echo "NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL" >> .env.production; \
+    fi && \
+    if [ -n "$OPENAI_API_KEY" ]; then \
+      echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> .env.production; \
+    fi && \
+    if [ -n "$USERS_JSON" ]; then \
+      echo "USERS_JSON=$USERS_JSON" >> .env.production; \
     fi
 
 # Disable telemetry during build
@@ -38,6 +52,12 @@ WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+
+# These variables are not used during build, but are needed at runtime
+# Railway will inject these into the container at runtime
+ENV OPENAI_API_KEY=$OPENAI_API_KEY
+ENV USERS_JSON=$USERS_JSON
+# Add any other runtime environment variables your app needs
 
 # Create a non-root user and set permissions
 RUN addgroup --system --gid 1001 nodejs

@@ -4,10 +4,13 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI with runtime environment variables
+const getOpenAIClient = () => {
+  // Ensure this runs at request time, not build time
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+};
 
 // Default models
 const DEFAULT_CHAT_MODEL = 'gpt-4.1-mini';
@@ -47,10 +50,12 @@ function cleanupOldConversations() {
 // Run cleanup every 15 minutes
 setInterval(cleanupOldConversations, 15 * 60 * 1000);
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
+  // Get OpenAI client at runtime
+  const openai = getOpenAIClient();
   try {
     // Extract session ID from cookies or headers
-    const sessionId = req.cookies.get('session-id')?.value || req.headers.get('x-session-id') || 'default';
+    const sessionId = request.cookies.get('session-id')?.value || request.headers.get('x-session-id') || 'default';
     
     // Get conversation for this session
     const conversation = getConversation(sessionId);
@@ -69,7 +74,7 @@ export async function POST(req: NextRequest) {
     conversation.processing = true;
     
     // Get the audio data from the request
-    const formData = await req.formData();
+    const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
     
     if (!audioFile) {
@@ -87,7 +92,7 @@ export async function POST(req: NextRequest) {
     
     try {
       // Get audio model from headers or use default
-      const audioModel = req.headers.get('x-audio-model') || DEFAULT_AUDIO_MODEL;
+      const audioModel = request.headers.get('x-audio-model') || DEFAULT_AUDIO_MODEL;
       
       // Transcribe the audio
       const transcription = await openai.audio.transcriptions.create({
@@ -107,8 +112,8 @@ export async function POST(req: NextRequest) {
       // Clean up temp file
       try { fs.unlinkSync(tempFilePath); } catch { /* ignore cleanup errors */ }
       
-      // Get chat model from headers or use default
-      const chatModel = req.headers.get('x-chat-model') || DEFAULT_CHAT_MODEL;
+      // Get chat model from request body, headers, or use default
+      const chatModel = request.headers.get('x-chat-model') || DEFAULT_CHAT_MODEL;
       
       // Generate AI response
       const chatCompletion = await openai.chat.completions.create({
@@ -193,9 +198,9 @@ export async function POST(req: NextRequest) {
 }
 
 // Get conversation history
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   // Extract session ID from cookies or headers
-  const sessionId = req.cookies.get('session-id')?.value || req.headers.get('x-session-id') || 'default';
+  const sessionId = request.cookies.get('session-id')?.value || request.headers.get('x-session-id') || 'default';
   
   // Get conversation for this session
   const conversation = getConversation(sessionId);
@@ -207,10 +212,10 @@ export async function GET(req: NextRequest) {
 }
 
 // Clear conversation history
-export async function DELETE(req: NextRequest) {
+export async function DELETE(request: NextRequest) {
   try {
     // Extract session ID from cookies or headers
-    const sessionId = req.cookies.get('session-id')?.value || req.headers.get('x-session-id') || 'default';
+    const sessionId = request.cookies.get('session-id')?.value || request.headers.get('x-session-id') || 'default';
     
     // Check if we have this conversation
     if (activeConversations.has(sessionId)) {

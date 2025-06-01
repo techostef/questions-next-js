@@ -9,13 +9,18 @@ const GIST_ID = '1556b6ba9012fab30e737c03bade8c7e';
 // URL to fetch the current content
 const URL_CACHE = `https://gist.githubusercontent.com/techostef/${GIST_ID}/raw/bankenglish.json`;
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI with runtime environment variables
+const getOpenAIClient = () => {
+  // Ensure this runs at request time, not build time
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+};
 
 export async function POST(request: Request) {
   try {
+    // Initialize OpenAI client at runtime, not build time
+    const openai = getOpenAIClient();
     // Get model preference from headers or use default
     const modelFromHeader = request.headers.get('x-chat-model');
     

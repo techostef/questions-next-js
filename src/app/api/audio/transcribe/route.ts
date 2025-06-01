@@ -1,13 +1,19 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI with runtime environment variables
+const getOpenAIClient = () => {
+  // Ensure this runs at request time, not build time
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+};
 
 export async function POST(request: Request) {
   try {
+    // Get OpenAI client at runtime
+    const openai = getOpenAIClient();
+    
     // Check if OpenAI API key is configured
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(

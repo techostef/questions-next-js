@@ -1,15 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { OpenAI } from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI with runtime environment variables
+const getOpenAIClient = () => {
+  // Ensure this runs at request time, not build time
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+};
 
 // Default model selection
 const DEFAULT_MODEL = "gpt-4.1-mini";
 
 export async function POST(req: Request) {
   try {
+    // Get OpenAI client at runtime
+    const openai = getOpenAIClient();
+    
     const { messages, model } = await req.json();
     
     // Get model from request body, headers, or use default

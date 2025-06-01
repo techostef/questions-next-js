@@ -28,9 +28,13 @@ const messagesWithSystem = [
   },
 ];
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI with runtime environment variables
+const getOpenAIClient = () => {
+  // Ensure this runs at request time, not build time
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+};
 
 // Default model selection
 const DEFAULT_MODEL = "gpt-4.1-mini";
@@ -47,6 +51,9 @@ export async function POST(req) {
     // Get model from request body, headers, or use default
     const selectedModel = model || req.headers.get('x-chat-model') || DEFAULT_MODEL;
 
+    // Get OpenAI client at runtime
+    const openai = getOpenAIClient();
+
     const cachedResult = getCachedResult(messages);
     const additionalMessage = cachedResult ? ".Please give me another questions." : "";
 
@@ -60,17 +67,18 @@ export async function POST(req) {
     });
 
     // Get data list questions from gists
-    const response = await fetch(URL_CACHE);
-    const data = await response.json();
-    const result = data?.result ? { ...data?.result } : { ...data };
-    if (result[messages]) {
-      result[messages].push(completion.choices[0].message);
+    const loadCacheRequest = await fetch(`${URL_CACHE}?t=${Date.now()}`);
+    const cacheData = await loadCacheRequest.json();
+
+    const data = cacheData?.result ? { ...cacheData?.result } : { ...cacheData };
+    if (data[messages]) {
+      data[messages].push(completion.choices[0].message);
     } else {
-      result[messages] = [completion.choices[0].message];
+      data[messages] = [completion.choices[0].message];
     }
 
     // Use the utility function to update the Gist
-    await updateGist(GIST_ID, 'english.json', result);
+    await updateGist(GIST_ID, 'english.json', data);
 
     // Store the result in our shared cache
     setCachedResult(messages, completion.choices[0].message);
