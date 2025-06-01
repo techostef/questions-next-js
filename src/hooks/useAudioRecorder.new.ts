@@ -178,7 +178,7 @@ export function useAudioRecorder(
     
     // Clean up resources last
     cleanupResources();
-  }, [isRecording, cleanupResources]);
+  }, [cleanupResources]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -264,6 +264,69 @@ export function useAudioRecorder(
       cleanupResources();
     }
   }, [cleanupResources]);
+
+  // Stop recording
+  const stopRecording = useCallback(() => {
+    console.log('Stopping recording, recorder state:', mediaRecorderRef.current?.state, 'isRecording:', isRecording);
+    
+    if (!mediaRecorderRef.current || !isRecording) {
+      console.log('No active recorder or not recording, cannot stop');
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      // Only stop if minimum recording time is reached or force stop
+      if (minRecordTimeReachedRef.current) {
+        // Make sure the recorder is in the recording state before stopping
+        if (mediaRecorderRef.current.state === 'recording') {
+          console.log('Stopping media recorder');
+          mediaRecorderRef.current.stop();
+          // Don't cleanup resources here - handleRecordingStop will do it
+        } else {
+          console.log('MediaRecorder not in recording state, cannot stop');
+          setIsRecording(false);
+          setIsProcessing(false);
+          cleanupResources();
+        }
+      } else {
+        // Recording is too short, wait until minimum duration is reached
+        const timeElapsed = Date.now() - recordingStartTimeRef.current;
+        const timeRemaining = minDuration - timeElapsed;
+        
+        console.log(`Recording too short (${timeElapsed}ms), waiting ${timeRemaining}ms more`);
+        setError(`Recording too short. Please record for at least ${Math.ceil(minDuration / 1000)} seconds.`);
+        
+        // Wait until minimum duration is reached before stopping
+        setTimeout(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            console.log('Stopping recorder after minimum duration');
+            try {
+              mediaRecorderRef.current.stop();
+              // Don't cleanup resources here - handleRecordingStop will do it
+            } catch (err) {
+              console.error('Error stopping recorder after min duration:', err);
+              setIsRecording(false);
+              setIsProcessing(false);
+              cleanupResources();
+            }
+          } else {
+            console.log('Recorder no longer active after waiting for minimum duration');
+            setIsRecording(false);
+            setIsProcessing(false);
+            cleanupResources();
+          }
+        }, Math.max(0, timeRemaining));
+      }
+    } catch (err) {
+      console.error('Error stopping media recorder:', err);
+      setIsRecording(false);
+      setIsProcessing(false);
+      cleanupResources();
+    }
+  }, [isRecording, minDuration, cleanupResources]);
+
   // Start recording
   const startRecording = useCallback(async () => {
     // Skip if already recording
@@ -380,83 +443,7 @@ export function useAudioRecorder(
       setIsProcessing(false);
       cleanupResources();
     }
-  }, [
-    preferredMimeType,
-    audioBitsPerSecond,
-    chunkSize,
-    maxDuration,
-    minDuration,
-    isRecording,
-    audioUrl,
-    echoCancellation,
-    noiseSuppression,
-    autoGainControl,
-    handleDataAvailable,
-    handleRecordingStop,
-    cleanupResources
-  ]);
-
-  // Stop recording
-  const stopRecording = useCallback(() => {
-    console.log('Stopping recording, recorder state:', mediaRecorderRef.current?.state, 'isRecording:', isRecording);
-    
-    if (!mediaRecorderRef.current || !isRecording) {
-      console.log('No active recorder or not recording, cannot stop');
-      return;
-    }
-
-    setIsProcessing(true);
-    
-    try {
-      // Only stop if minimum recording time is reached or force stop
-      if (minRecordTimeReachedRef.current) {
-        // Make sure the recorder is in the recording state before stopping
-        if (mediaRecorderRef.current.state === 'recording') {
-          console.log('Stopping media recorder');
-          mediaRecorderRef.current.stop();
-          // Don't cleanup resources here - handleRecordingStop will do it
-        } else {
-          console.log('MediaRecorder not in recording state, cannot stop');
-          setIsRecording(false);
-          setIsProcessing(false);
-          cleanupResources();
-        }
-      } else {
-        // Recording is too short, wait until minimum duration is reached
-        const timeElapsed = Date.now() - recordingStartTimeRef.current;
-        const timeRemaining = minDuration - timeElapsed;
-        
-        console.log(`Recording too short (${timeElapsed}ms), waiting ${timeRemaining}ms more`);
-        setError(`Recording too short. Please record for at least ${Math.ceil(minDuration / 1000)} seconds.`);
-        
-        // Wait until minimum duration is reached before stopping
-        setTimeout(() => {
-          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-            console.log('Stopping recorder after minimum duration');
-            try {
-              mediaRecorderRef.current.stop();
-              // Don't cleanup resources here - handleRecordingStop will do it
-            } catch (err) {
-              console.error('Error stopping recorder after min duration:', err);
-              setIsRecording(false);
-              setIsProcessing(false);
-              cleanupResources();
-            }
-          } else {
-            console.log('Recorder no longer active after waiting for minimum duration');
-            setIsRecording(false);
-            setIsProcessing(false);
-            cleanupResources();
-          }
-        }, Math.max(0, timeRemaining));
-      }
-    } catch (err) {
-      console.error('Error stopping media recorder:', err);
-      setIsRecording(false);
-      setIsProcessing(false);
-      cleanupResources();
-    }
-  }, [isRecording, minDuration, cleanupResources]);
+  }, [isRecording, audioUrl, echoCancellation, noiseSuppression, autoGainControl, preferredMimeType, audioBitsPerSecond, handleDataAvailable, handleRecordingStop, minDuration, maxDuration, chunkSize, cleanupResources, stopRecording]);
 
   // Clear recorded audio
   const clearRecording = useCallback(() => {

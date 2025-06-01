@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useEffect, useCallback } from "react";
 
 interface UseBasicRecorderReturn {
@@ -102,7 +102,7 @@ export function useBasicRecorder({
     } catch (err) {
       console.error("Microphone access denied or error:", err);
     }
-  }, [isClient, audioUrl]);
+  }, [isClient, audioUrl, onBlobReceived]);
 
   // Stop recording
   const stopRecording = useCallback(() => {
