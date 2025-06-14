@@ -291,6 +291,20 @@ export default function StoriesPage() {
     }
   }, [userSpeech]);
 
+  const handleCustomStorySubmission = (userInputText: string) => {
+    if (userInputText.trim().length > 0) {
+      const newStory: Story = {
+        difficulty: "custom",
+        content: userInputText,
+        id: `story-${Date.now()}`,
+        title: `Story Custom`,
+        words: userInputText.split(" ").length,
+      };
+      setSelectedStory(newStory);
+      setSelectedStoryWithCache(newStory);
+    }
+  };
+
   // Set the selected part index and save to localStorage
   const setPartIndexWithCache = useCallback(
     (index: number) => {
@@ -411,6 +425,7 @@ export default function StoriesPage() {
               setPartIndexWithCache={setPartIndexWithCache}
               isFullStoryView={isFullStoryView}
               setIsFullStoryView={setIsFullStoryView}
+              handleCustomStorySubmission={handleCustomStorySubmission}
             />
 
             <ListStories

@@ -74,17 +74,9 @@ export const StoryContent = ({
             // Display all parts combined when in full story view
             storyParts.map((part, partIndex) => (
               <div key={`part-${partIndex}`}>
-                {partIndex > 0 && <hr className="my-4 border-gray-200" />}
                 {part.content.split("\n").map((line, lineIndex) => (
                   <p key={`${partIndex}-${lineIndex}`} className="mb-2">
-                    {line.split(" ").map((word, wordIndex) => (
-                      <span
-                        key={`${partIndex}-${lineIndex}-${wordIndex}`}
-                        className="inline-block mr-1"
-                      >
-                        {word}
-                      </span>
-                    ))}
+                    {line}
                   </p>
                 ))}
               </div>
@@ -95,14 +87,7 @@ export const StoryContent = ({
               .split("\n")
               .map((line, lineIndex) => (
                 <p key={lineIndex} className="mb-2">
-                  {line.split(" ").map((word, wordIndex) => (
-                    <span
-                      key={`${lineIndex}-${wordIndex}`}
-                      className="inline-block mr-1"
-                    >
-                      {word}
-                    </span>
-                  ))}
+                  {line}
                 </p>
               ))
           )

@@ -2,7 +2,7 @@ export interface Story {
   id: string;
   title: string;
   content: string;
-  difficulty: "beginner" | "intermediate" | "advanced";
+  difficulty: "beginner" | "intermediate" | "advanced" | "custom";
   words: number;
 }
 

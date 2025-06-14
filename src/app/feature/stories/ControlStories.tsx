@@ -1,4 +1,5 @@
 import { Story, StoryPart } from "@/types/story";
+import { useState } from "react";
 
 interface ControlStoriesProps {
   isRecording: boolean;
@@ -11,6 +12,7 @@ interface ControlStoriesProps {
   setPartIndexWithCache: (index: number) => void;
   isFullStoryView: boolean;
   setIsFullStoryView: (value: boolean) => void;
+  handleCustomStorySubmission: (userInputText: string) => void;
 }
 
 const ControlStories = ({
@@ -24,7 +26,10 @@ const ControlStories = ({
   setPartIndexWithCache,
   isFullStoryView,
   setIsFullStoryView,
+  handleCustomStorySubmission,
 }: ControlStoriesProps) => {
+  const [userInputText, setUserInputText] = useState("");
+  const [isCustomStory, setIsCustomStory] = useState(false);
   return (
     <div className="mb-6">
       <div className="flex justify-between items-center mb-4">
@@ -38,6 +43,7 @@ const ControlStories = ({
           </button>
           <button
             onClick={() => {
+              setIsCustomStory(false);
               if (!isRecording && !isReading) {
                 setIsStoryDialogOpen(true);
               }
@@ -49,11 +55,46 @@ const ControlStories = ({
           >
             Change Story
           </button>
+          <button
+            onClick={() => setIsCustomStory(true)}
+            className={`px-4 py-2 bg-yellow-50 text-yellow-600 rounded-md border border-yellow-200 hover:bg-yellow-100 transition-colors ${
+              isRecording || isReading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            disabled={isRecording || isReading}
+          >
+            Custom Story
+          </button>
         </div>
       </div>
 
       {/* Current story card */}
-      <div className="p-4 border rounded-lg border-blue-500 bg-blue-50">
+      {isCustomStory && (
+        <div className="mb-6 p-4 rounded-lg border border-yellow-500 bg-yellow-50">
+          <h4 className="text-md font-medium mb-2">Add to Story</h4>
+          <textarea
+            value={userInputText}
+            onChange={(e) => setUserInputText(e.target.value)}
+            placeholder="Type your text to add to the story..."
+            className="w-full p-3 rounded-md mb-3 min-h-[100px] bg-white border border-yellow-500"
+            disabled={isRecording || isReading}
+          />
+          <div className="flex justify-end">
+            <button
+              onClick={() => handleCustomStorySubmission(userInputText)}
+              disabled={!userInputText.trim() || isRecording || isReading}
+              className={`px-4 py-2 rounded-md ${
+                !userInputText.trim() || isRecording || isReading
+                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  : "bg-blue-500 text-white hover:bg-blue-600"
+              }`}
+            >
+              Submit Text
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="p-4 rounded-lg border border-blue-500 bg-blue-50">
         <h3 className="font-medium text-lg">{selectedStory?.title}</h3>
         <div className="flex justify-between mt-2">
           <span
@@ -77,21 +118,49 @@ const ControlStories = ({
               <div className="flex items-center space-x-3">
                 <span className="text-sm font-medium">Story View</span>
                 <div className="flex items-center">
-                  <span className={`text-xs ${!isFullStoryView ? "font-medium text-blue-600" : "text-gray-500"}`}>Parts</span>
-                  <button 
-                    onClick={() => !isRecording && !isReading && setIsFullStoryView(!isFullStoryView)}
+                  <span
+                    className={`text-xs ${
+                      !isFullStoryView
+                        ? "font-medium text-blue-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    Parts
+                  </span>
+                  <button
+                    onClick={() =>
+                      !isRecording &&
+                      !isReading &&
+                      setIsFullStoryView(!isFullStoryView)
+                    }
                     disabled={isRecording || isReading}
                     className={`relative inline-flex h-5 w-10 mx-2 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none
-                      ${isFullStoryView ? 'bg-blue-500' : 'bg-gray-300'}
-                      ${isRecording || isReading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    aria-label={isFullStoryView ? 'Show as parts' : 'Show full story'}
+                      ${isFullStoryView ? "bg-blue-500" : "bg-gray-300"}
+                      ${
+                        isRecording || isReading
+                          ? "opacity-50 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }`}
+                    aria-label={
+                      isFullStoryView ? "Show as parts" : "Show full story"
+                    }
                   >
                     <span
-                      className={`${isFullStoryView ? 'translate-x-5' : 'translate-x-0'}
+                      className={`${
+                        isFullStoryView ? "translate-x-5" : "translate-x-0"
+                      }
                         pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out`}
                     />
                   </button>
-                  <span className={`text-xs ${isFullStoryView ? "font-medium text-blue-600" : "text-gray-500"}`}>Full</span>
+                  <span
+                    className={`text-xs ${
+                      isFullStoryView
+                        ? "font-medium text-blue-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    Full
+                  </span>
                 </div>
               </div>
               <span className="text-xs text-gray-500">
