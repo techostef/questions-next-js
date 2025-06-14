@@ -15,43 +15,7 @@ import AddStories from "@/app/feature/stories/addStories";
 import HistoryAttempts from "@/app/feature/stories/historyAttemps";
 import { findMistakes } from "@/lib/string";
 import ListStories from "@/app/feature/stories/listStories";
-
-// SpeechRecognition is now handled by the useSpeechRecognition hook
-
-export interface Story {
-  id: string;
-  title: string;
-  content: string;
-  difficulty: "beginner" | "intermediate" | "advanced";
-  words: number;
-}
-
-interface StoryPart {
-  part: number;
-  content: string;
-  words: number;
-}
-
-interface WordMatch {
-  word: string;
-  matched: boolean;
-  timestamp: number;
-}
-
-export interface ReadingAttempt {
-  storyId: string;
-  date: number;
-  recordedAudio?: string; // Base64 encoded audio
-  accuracy: number;
-  duration: number;
-  missedWords: MissedWord[];
-  matchedWords: WordMatch[];
-}
-
-interface MissedWord {
-  index: number;
-  word: string;
-}
+import { MissedWord, ReadingAttempt, Story, StoryPart, WordMatch } from "@/types/story";
 
 export default function StoriesPage() {
   // State for stories and reading practice
@@ -129,22 +93,6 @@ export default function StoriesPage() {
   const fetchStories = useCallback(async () => {
     setStories([...STORIES]);
     return [...STORIES];
-    // setIsLoading(true);
-    // try {
-    //   const response = await fetch('/api/stories');
-    //   if (!response.ok) {
-    //     throw new Error('Failed to fetch stories');
-    //   }
-    //   const data = await response.json();
-    //   setStories([...data, ...STORIES]);
-    //   return data;
-    // } catch (error) {
-    //   setStories([...STORIES]);
-    //   console.error('Error fetching stories:', error);
-    //   return [];
-    // } finally {
-    //   setIsLoading(false);
-    // }
   }, []);
 
   // Load reading attempts

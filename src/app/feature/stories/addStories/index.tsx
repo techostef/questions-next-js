@@ -1,4 +1,4 @@
-import { Story } from "@/app/speak/stories/page";
+import { Story } from "@/types/story";
 import Dialog from "@/components/Dialog";
 import { Dispatch, SetStateAction, useState } from "react";
 

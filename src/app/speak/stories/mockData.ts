@@ -1,4 +1,4 @@
-import { Story } from "./page";
+import { Story } from "@/types/story";
 
 // Mock stories for practice
 export const STORIES: Story[] = [

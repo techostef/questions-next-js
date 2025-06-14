@@ -1,5 +1,4 @@
-import { ReadingAttempt } from "@/app/speak/stories/page";
-import { Story } from "@/types/story";
+import { ReadingAttempt, Story } from "@/types/story";
 
 interface Props {
   readingAttempts: ReadingAttempt[];
