@@ -8,6 +8,7 @@ interface StoryContentProps {
   storyContentRef: React.RefObject<HTMLDivElement>;
   showResults: boolean;
   getHighlightedText: () => string;
+  isFullStoryView?: boolean;
 }
 
 export const StoryContent = ({
@@ -18,22 +19,30 @@ export const StoryContent = ({
   storyContentRef,
   showResults,
   getHighlightedText,
+  isFullStoryView = false,
 }: StoryContentProps) => {
   return (
     <div className="relative">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-medium">
           {selectedStory?.title}{" "}
-          {storyParts.length > 1 && (
+          {storyParts.length > 1 && !isFullStoryView && (
             <span className="text-sm font-normal text-gray-500">
               - Part {selectedPartIndex + 1}
+            </span>
+          )}
+          {storyParts.length > 1 && isFullStoryView && (
+            <span className="text-sm font-normal text-gray-500">
+              - Full Story
             </span>
           )}
         </h3>
 
         {storyParts.length > 0 && (
           <div className="text-sm text-gray-500">
-            {storyParts[selectedPartIndex].words} words
+            {isFullStoryView 
+              ? storyParts.reduce((total, part) => total + part.words, 0) 
+              : storyParts[selectedPartIndex].words} words
           </div>
         )}
       </div>
@@ -61,20 +70,42 @@ export const StoryContent = ({
         {showResults ? (
           <div dangerouslySetInnerHTML={{ __html: getHighlightedText() }} />
         ) : storyParts.length > 0 ? (
-          storyParts[selectedPartIndex].content
-            .split("\n")
-            .map((line, lineIndex) => (
-              <p key={lineIndex} className="mb-2">
-                {line.split(" ").map((word, wordIndex) => (
-                  <span
-                    key={`${lineIndex}-${wordIndex}`}
-                    className="inline-block mr-1"
-                  >
-                    {word}
-                  </span>
+          isFullStoryView ? (
+            // Display all parts combined when in full story view
+            storyParts.map((part, partIndex) => (
+              <div key={`part-${partIndex}`}>
+                {partIndex > 0 && <hr className="my-4 border-gray-200" />}
+                {part.content.split("\n").map((line, lineIndex) => (
+                  <p key={`${partIndex}-${lineIndex}`} className="mb-2">
+                    {line.split(" ").map((word, wordIndex) => (
+                      <span
+                        key={`${partIndex}-${lineIndex}-${wordIndex}`}
+                        className="inline-block mr-1"
+                      >
+                        {word}
+                      </span>
+                    ))}
+                  </p>
                 ))}
-              </p>
+              </div>
             ))
+          ) : (
+            // Display only the selected part when in parts view
+            storyParts[selectedPartIndex].content
+              .split("\n")
+              .map((line, lineIndex) => (
+                <p key={lineIndex} className="mb-2">
+                  {line.split(" ").map((word, wordIndex) => (
+                    <span
+                      key={`${lineIndex}-${wordIndex}`}
+                      className="inline-block mr-1"
+                    >
+                      {word}
+                    </span>
+                  ))}
+                </p>
+              ))
+          )
         ) : (
           selectedStory?.content.split("\n").map((line, lineIndex) => (
             <p key={lineIndex} className="mb-2">

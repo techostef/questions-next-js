@@ -16,6 +16,8 @@ import HistoryAttempts from "@/app/feature/stories/historyAttemps";
 import { findMistakes } from "@/lib/string";
 import ListStories from "@/app/feature/stories/listStories";
 import { MissedWord, ReadingAttempt, Story, StoryPart, WordMatch } from "@/types/story";
+import { StoryContent } from "@/app/feature/stories/StoryContent";
+import ControlStories from "@/app/feature/stories/ControlStories";
 
 export default function StoriesPage() {
   // State for stories and reading practice
@@ -25,6 +27,7 @@ export default function StoriesPage() {
   const [selectedPartIndex, setSelectedPartIndex] = useState(0);
   const [isReading, setIsReading] = useState(false);
   const [userSpeech, setUserSpeech] = useState("");
+  const [isFullStoryView, setIsFullStoryView] = useState(false);
   const [missedWords, setMissedWords] = useState<MissedWord[]>([]);
   const [matchedWords, setMatchedWords] = useState<WordMatch[]>([]);
   const [accuracy, setAccuracy] = useState(0);
@@ -397,124 +400,18 @@ export default function StoriesPage() {
 
           <div className="mt-6 bg-white p-6 rounded-lg shadow-sm">
             {/* Story selection button */}
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-medium">Current Story</h2>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => setIsAddStoryDialogOpen(true)}
-                    className="px-4 py-2 bg-green-50 text-green-600 rounded-md border border-green-200 hover:bg-green-100 transition-colors"
-                  >
-                    Add Story
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!isRecording && !isReading) {
-                        setIsStoryDialogOpen(true);
-                      }
-                    }}
-                    className={`px-4 py-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors ${
-                      isRecording || isReading
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                    }`}
-                    disabled={isRecording || isReading}
-                  >
-                    Change Story
-                  </button>
-                </div>
-              </div>
-
-              {/* Current story card */}
-              <div className="p-4 border rounded-lg border-blue-500 bg-blue-50">
-                <h3 className="font-medium text-lg">{selectedStory?.title}</h3>
-                <div className="flex justify-between mt-2">
-                  <span
-                    className={`px-2 py-0.5 rounded ${
-                      selectedStory?.difficulty === "beginner"
-                        ? "bg-green-100 text-green-800"
-                        : selectedStory?.difficulty === "intermediate"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {selectedStory?.difficulty}
-                  </span>
-                  <span className="text-gray-500">
-                    {selectedStory?.words} words
-                  </span>
-                </div>
-
-                {/* Story parts navigation */}
-                {storyParts.length > 1 && (
-                  <div className="mt-4 border-t pt-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium">Story Parts</span>
-                      <span className="text-xs text-gray-500">
-                        {selectedPartIndex + 1} of {storyParts.length}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <button
-                        onClick={() =>
-                          setPartIndexWithCache(selectedPartIndex - 1)
-                        }
-                        disabled={
-                          selectedPartIndex === 0 || isRecording || isReading
-                        }
-                        className={`px-2 py-1 rounded ${
-                          selectedPartIndex === 0 || isRecording || isReading
-                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                            : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                        }`}
-                      >
-                        ← Previous
-                      </button>
-
-                      <div className="flex space-x-1">
-                        {storyParts.map((_, index) => (
-                          <button
-                            key={index}
-                            onClick={() => setPartIndexWithCache(index)}
-                            disabled={isRecording || isReading}
-                            className={`w-6 h-6 rounded-full text-xs flex items-center justify-center ${
-                              selectedPartIndex === index
-                                ? "bg-blue-500 text-white"
-                                : isRecording || isReading
-                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                            }`}
-                          >
-                            {index + 1}
-                          </button>
-                        ))}
-                      </div>
-
-                      <button
-                        onClick={() =>
-                          setPartIndexWithCache(selectedPartIndex + 1)
-                        }
-                        disabled={
-                          selectedPartIndex === storyParts.length - 1 ||
-                          isRecording ||
-                          isReading
-                        }
-                        className={`px-2 py-1 rounded ${
-                          selectedPartIndex === storyParts.length - 1 ||
-                          isRecording ||
-                          isReading
-                            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                            : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                        }`}
-                      >
-                        Next →
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <ControlStories
+              isRecording={isRecording}
+              isReading={isReading}
+              setIsAddStoryDialogOpen={setIsAddStoryDialogOpen}
+              setIsStoryDialogOpen={setIsStoryDialogOpen}
+              selectedStory={selectedStory}
+              storyParts={storyParts}
+              selectedPartIndex={selectedPartIndex}
+              setPartIndexWithCache={setPartIndexWithCache}
+              isFullStoryView={isFullStoryView}
+              setIsFullStoryView={setIsFullStoryView}
+            />
 
             <ListStories
               isStoryDialogOpen={isStoryDialogOpen}
@@ -640,79 +537,16 @@ export default function StoriesPage() {
             )}
 
             {/* Story content */}
-            <div className="relative">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-medium">
-                  {selectedStory?.title}{" "}
-                  {storyParts.length > 1 && (
-                    <span className="text-sm font-normal text-gray-500">
-                      - Part {selectedPartIndex + 1}
-                    </span>
-                  )}
-                </h3>
-
-                {storyParts.length > 0 && (
-                  <div className="text-sm text-gray-500">
-                    {storyParts[selectedPartIndex].words} words
-                  </div>
-                )}
-              </div>
-
-              {isRecording && (
-                <div className="absolute right-0 top-0">
-                  <div className="animate-pulse flex items-center">
-                    <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                    <span className="text-sm font-medium">Recording...</span>
-                  </div>
-                </div>
-              )}
-
-              <div
-                ref={storyContentRef}
-                className={`prose max-w-none p-4 bg-gray-50 rounded-lg overflow-y-auto ${
-                  isRecording ? "border-2 border-blue-500" : ""
-                }`}
-                style={{
-                  maxHeight: "400px",
-                  whiteSpace: "pre-wrap",
-                  lineHeight: "1.8",
-                }}
-              >
-                {showResults ? (
-                  <div
-                    dangerouslySetInnerHTML={{ __html: getHighlightedText() }}
-                  />
-                ) : storyParts.length > 0 ? (
-                  storyParts[selectedPartIndex].content
-                    .split("\n")
-                    .map((line, lineIndex) => (
-                      <p key={lineIndex} className="mb-2">
-                        {line.split(" ").map((word, wordIndex) => (
-                          <span
-                            key={`${lineIndex}-${wordIndex}`}
-                            className="inline-block mr-1"
-                          >
-                            {word}
-                          </span>
-                        ))}
-                      </p>
-                    ))
-                ) : (
-                  selectedStory?.content.split("\n").map((line, lineIndex) => (
-                    <p key={lineIndex} className="mb-2">
-                      {line.split(" ").map((word, wordIndex) => (
-                        <span
-                          key={`${lineIndex}-${wordIndex}`}
-                          className="inline-block mr-1"
-                        >
-                          {word}
-                        </span>
-                      ))}
-                    </p>
-                  ))
-                )}
-              </div>
-            </div>
+            <StoryContent
+              selectedStory={selectedStory}
+              storyParts={storyParts}
+              selectedPartIndex={selectedPartIndex}
+              isRecording={isRecording}
+              storyContentRef={storyContentRef}
+              showResults={showResults}
+              getHighlightedText={getHighlightedText}
+              isFullStoryView={isFullStoryView}
+            />
 
             {/* User speech output for debugging */}
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
