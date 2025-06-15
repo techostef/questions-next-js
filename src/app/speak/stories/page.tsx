@@ -293,7 +293,9 @@ export default function StoriesPage() {
 
   const handleCustomStorySubmission = (userInputText: string) => {
     if (userInputText.trim().length > 0) {
-      const cleanUserInputText = userInputText.replaceAll("’", "'");
+      let cleanUserInputText = userInputText.replaceAll("’", "'");
+      cleanUserInputText = cleanUserInputText.replaceAll("“", "");
+      cleanUserInputText = cleanUserInputText.replaceAll("”", "");
       const newStory: Story = {
         difficulty: "custom",
         content: cleanUserInputText,
@@ -354,37 +356,56 @@ export default function StoriesPage() {
 
     const userSpeechWords = normalizeText(userSpeech).split(" ");
     let indexWord = -1;
+    
+    const contentToHighlightWords = contentToHighlight.split(/\b/);
 
+    const result = [];
+    let index = -1;
+    while (index < contentToHighlightWords.length - 1) {
+      index++;
+      let part = contentToHighlightWords[index];
+      const nextIsSingleQuote = contentToHighlightWords[index + 1] === "'";
+      if (nextIsSingleQuote) {
+        part += "'" + contentToHighlightWords[index + 2];
+        index += 2;
+      }
+      const normalized = normalizeText(part);
+      const skipMatch = !normalized || normalized.length < 2;
+      const skipWord = normalized === ", " || normalized === ",";
+      const excludeSkip = normalized !== "a" && normalized !== "i";
+      if (skipWord) {
+        result.push(part);
+        continue;
+      }
+      if (skipMatch && excludeSkip) {
+        result.push(part);
+        continue;
+      }
+      indexWord++;
+
+      const findMissedWord = missedWords.find(
+        (_value, index) => indexWord === index
+      );
+      if (findMissedWord?.word === normalized) {
+        result.push(`<span class="text-red-500 font-bold">${part}</span>`);
+        continue;
+      }
+
+      const userWord = userSpeechWords[indexWord];
+      if (!userWord) {
+        result.push(part);
+        continue;
+      }
+      if (userWord === normalized) {
+        result.push(`<span class="text-green-500">${part}</span>`);
+        continue;
+      } else {
+        result.push(`<span class="text-red-500 font-bold">${part}</span>`);
+        continue;
+      }
+    }
     // Create spans with appropriate classes for highlighting
-    return contentToHighlight
-      .split(/\b/)
-      .map((part) => {
-        const normalized = normalizeText(part);
-        const skipMatch = !normalized || normalized.length < 2;
-        const skipWord = normalized === ", " || normalized === ",";
-        const excludeSkip = normalized !== "a" && normalized !== "i";
-        if (skipWord) return part;
-        if (skipMatch && excludeSkip) return part;
-        indexWord++;
-
-        const findMissedWord = missedWords.find(
-          (_value, index) => indexWord === index
-        );
-        if (findMissedWord?.word === normalized) {
-          return `<span class="text-red-500 font-bold">${part}</span>`;
-        }
-
-        const userWord = userSpeechWords[indexWord];
-        if (!userWord) {
-          return part;
-        }
-        if (userWord === normalized) {
-          return `<span class="text-green-500">${part}</span>`;
-        } else {
-          return `<span class="text-red-500 font-bold">${part}</span>`;
-        }
-      })
-      .join("");
+    return result.join("");
   }, [
     selectedStory,
     missedWords,
