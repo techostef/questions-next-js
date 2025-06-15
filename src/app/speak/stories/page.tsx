@@ -293,12 +293,13 @@ export default function StoriesPage() {
 
   const handleCustomStorySubmission = (userInputText: string) => {
     if (userInputText.trim().length > 0) {
+      const cleanUserInputText = userInputText.replaceAll("’", "'");
       const newStory: Story = {
         difficulty: "custom",
-        content: userInputText,
+        content: cleanUserInputText,
         id: `story-${Date.now()}`,
         title: `Story Custom`,
-        words: userInputText.split(" ").length,
+        words: cleanUserInputText.split(" ").length,
       };
       setSelectedStory(newStory);
       setSelectedStoryWithCache(newStory);

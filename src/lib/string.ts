@@ -3,58 +3,61 @@ type ContentObject = { content?: string };
 type APIResponse = string | ContentObject;
 
 // Function to split text into speakable chunks
-export const splitTextIntoChunks = (text: string, maxChunkLength: number): string[] => {
+export const splitTextIntoChunks = (
+  text: string,
+  maxChunkLength: number
+): string[] => {
   // Regular expression that preserves technical terms like next.js, react.js
   // It looks for sentence boundaries but ignores periods in patterns like word.word
-  
+
   // First, find technical terms (like next.js, react.js) and convert them for better speech synthesis
   // We'll replace dots with spaces for better pronunciation (next.js -> next js)
-  const technicalTerms: {original: string, speech: string}[] = [];
+  const technicalTerms: { original: string; speech: string }[] = [];
   const protectedText = text.replace(/\b\w+\.\w+\b/g, (match) => {
     // Create a speech-friendly version with dot replaced by space
-    const speechVersion = match.replace(/\./g, ' ');
+    const speechVersion = match.replace(/\./g, " ");
     technicalTerms.push({
       original: match,
-      speech: speechVersion
+      speech: speechVersion,
     });
     return `__TECHTERM${technicalTerms.length - 1}__`;
   });
-  
+
   // Now split on actual sentence boundaries
   const sentenceRegex = /[^.!?]+[.!?]+/g;
   const rawChunks = protectedText.match(sentenceRegex) || [protectedText];
   const result: string[] = [];
-  
+
   // Now ensure no chunk is too long by further splitting if needed
-  rawChunks.forEach(chunk => {
+  rawChunks.forEach((chunk) => {
     if (chunk.length <= maxChunkLength) {
       result.push(chunk);
     } else {
       // If a sentence is too long, split by commas
       const commaChunks = chunk.split(/,\s+/);
-      let currentChunk = '';
-      
-      commaChunks.forEach(commaChunk => {
+      let currentChunk = "";
+
+      commaChunks.forEach((commaChunk) => {
         if (currentChunk.length + commaChunk.length < maxChunkLength) {
-          currentChunk += (currentChunk ? ', ' : '') + commaChunk;
+          currentChunk += (currentChunk ? ", " : "") + commaChunk;
         } else {
           if (currentChunk) result.push(currentChunk);
           currentChunk = commaChunk;
         }
       });
-      
+
       if (currentChunk) result.push(currentChunk);
     }
   });
-  
+
   // Restore technical terms with speech-friendly versions (dots replaced with spaces)
-  const finalResult = result.map(chunk => {
+  const finalResult = result.map((chunk) => {
     return chunk.replace(/__TECHTERM(\d+)__/g, (_, index) => {
       // Use the speech-friendly version (with dots replaced by spaces)
       return technicalTerms[parseInt(index)].speech;
     });
   });
-  
+
   return finalResult;
 };
 
@@ -67,9 +70,7 @@ export const cleanUpResult = (data: APIResponse) => {
       }
       if (typeof data.content === "string") {
         if (data.content.includes("```json")) {
-          const jsonContent = data.content
-            .split("```json")[1]
-            .split("```")[0];
+          const jsonContent = data.content.split("```json")[1].split("```")[0];
           return JSON.parse(jsonContent);
         } else {
           return JSON.parse(data.content);
@@ -90,9 +91,14 @@ export const cleanUpResult = (data: APIResponse) => {
   }
 };
 
-export function findMistakes(original, test) {
+export function findMistakes(original: string, test: string) {
+  original = original.replaceAll("-", " ");
+  original = original.replaceAll("—", " ");
+  original = original.replaceAll("’", "'");
+  console.log("original", original);
+  console.log("test", test);
   // Helper function to clean and split text into words
-  const clean = (str) =>
+  const clean = (str: string) =>
     str
       .toLowerCase()
       .replace(/[.,!?;:"']/g, "") // remove punctuation
@@ -107,7 +113,10 @@ export function findMistakes(original, test) {
   return results;
 }
 
-export function findBestAlignment(originalWords: string[], testWords: string[]) {
+export function findBestAlignment(
+  originalWords: string[],
+  testWords: string[]
+) {
   // Use dynamic programming to find the best alignment
   const mistakes = [];
   let i = 0;
