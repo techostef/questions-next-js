@@ -51,10 +51,10 @@ export default function Dialog({
   return (
     <dialog
       ref={dialogRef}
-      className={`w-full h-full ${maxWidth} p-0 rounded-lg shadow-xl backdrop:bg-opacity-50 m-auto`}
+      className={`w-full h-full ${maxWidth} p-0 rounded-lg shadow-xl backdrop:bg-opacity-50 m-auto overflow-x-hidden`}
       onClose={onClose}
     >
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full overflow-x-hidden">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold">{title}</h2>

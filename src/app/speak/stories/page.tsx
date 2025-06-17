@@ -18,6 +18,7 @@ import ListStories from "@/app/feature/stories/listStories";
 import { MissedWord, ReadingAttempt, Story, StoryPart, WordMatch } from "@/types/story";
 import { StoryContent } from "@/app/feature/stories/StoryContent";
 import ControlStories from "@/app/feature/stories/ControlStories";
+import Button from "@/components/Button";
 
 export default function StoriesPage() {
   // State for stories and reading practice
@@ -496,21 +497,21 @@ export default function StoriesPage() {
               />
 
               {isReading && (
-                <button
+                <Button
                   onClick={stopPlayback}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  variant="danger"
                 >
                   Stop Playback
-                </button>
+                </Button>
               )}
 
               {showResults && (
-                <button
+                <Button
                   onClick={resetReading}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  variant="danger"
                 >
                   Reset
-                </button>
+                </Button>
               )}
             </div>
 
@@ -520,12 +521,12 @@ export default function StoriesPage() {
                 {!isSupported
                   ? "Your browser doesn't support speech recognition. Try using Chrome or Edge."
                   : componentError}
-                <button
+                <Button
                   onClick={() => setComponentError(null)}
-                  className="ml-2 underline text-blue-600 hover:text-blue-800"
+                  variant="primary"
                 >
                   Dismiss
-                </button>
+                </Button>
               </div>
             )}
 

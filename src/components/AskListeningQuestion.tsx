@@ -6,8 +6,12 @@ import { useForm } from "react-hook-form";
 import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 import QuizListening from "./QuizListening";
-import { ListeningQuizData, useQuizListeningStore } from "@/store/quizListeningStore";
+import {
+  ListeningQuizData,
+  useQuizListeningStore,
+} from "@/store/quizListeningStore";
 import { v4 as uuidv4 } from "uuid";
+import Button from "./Button";
 
 export interface AskListeningQuestionMethods {
   sendMessage: (customPrompt?: string) => Promise<void>;
@@ -20,21 +24,21 @@ const AskListeningQuestion = () => {
   const [showCachedQuestions, setShowCachedQuestions] = useState(false);
   const [selectedCacheIndex, setSelectedCacheIndex] = useState<number>(0);
   const [countCacheQuestions, setCountCacheQuestions] = useState<number>(0);
-  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_CHAT_MODEL);
-  const [listeningData, setListeningData] = useState<Record<string, Array<unknown>>>({});
+  const [selectedModel, setSelectedModel] =
+    useState<string>(DEFAULT_CHAT_MODEL);
+  const [listeningData, setListeningData] = useState<
+    Record<string, Array<unknown>>
+  >({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  
+
   // Using global state from Zustand store
   const { quizData, setQuizData, setAllQuizData, addQuizToCollection } =
     useQuizListeningStore();
 
   // Setup react-hook-form
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-  } = useForm<{ question: string }>({ defaultValues: { question: "" } });
+  const { register, handleSubmit, setValue, watch } = useForm<{
+    question: string;
+  }>({ defaultValues: { question: "" } });
   const questionValue = watch("question");
 
   const isLoading = isLoadingMain;
@@ -164,7 +168,7 @@ const AskListeningQuestion = () => {
       }
 
       const data = await response.json();
-      
+
       // Update state with new response
       setListeningData((prevData) => ({
         ...prevData,
@@ -182,114 +186,105 @@ const AskListeningQuestion = () => {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow p-6 mb-4">
-        <h2 className="text-xl font-semibold mb-4">Listening Quiz</h2>
-        
-        {errorMessage && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            <strong className="font-bold">Error:</strong> {errorMessage}
-          </div>
-        )}
-        
-        {/* Model Selection */}
-        <div className="mb-4 bg-white rounded-lg p-4 shadow-sm">
-          <ModelSelector
-            type="chat"
-            defaultModel={DEFAULT_CHAT_MODEL}
-            onChange={setSelectedModel}
-            showFullList={false}
-            pageName="quiz-listening"
-          />
+      {errorMessage && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <strong className="font-bold">Error:</strong> {errorMessage}
         </div>
+      )}
 
-        {/* Controls */}
-        <div className="flex space-x-2 mb-2">
-          <button
-            onClick={() => setShowCachedQuestions(!showCachedQuestions)}
-            className="px-2 py-1 bg-blue-100 hover:bg-blue-200 rounded text-sm"
-          >
-            {showCachedQuestions ? "Hide History" : "Show History"}
-          </button>
-        </div>
-
-        {/* Cached questions history */}
-        {showCachedQuestions && cachedQuestions.length > 0 && (
-          <div className="mb-3 border rounded p-2 bg-gray-50">
-            <h3 className="text-sm font-medium mb-1">Previous Questions:</h3>
-            <div className="max-h-40 overflow-y-auto">
-              {cachedQuestions.map((question, index) => (
-                <button
-                  key={index}
-                  onClick={() => selectCachedQuestion(question)}
-                  className="block w-full text-left p-1 text-sm hover:bg-blue-50 rounded truncate"
-                  title={question}
-                >
-                  {index + 1}.{" "}
-                  {question.length > 50
-                    ? question.substring(0, 50) + "..."
-                    : question}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Form with react-hook-form */}
-        <form
-          onSubmit={handleSubmit((data) => sendMessage(data.question))}
-          className="space-y-2"
-        >
-          <div className="flex flex-col gap-2">
-            <input
-              className="border p-2 w-full"
-              placeholder="Enter a listening topic (e.g., 'Daily Conversations', 'Business English', 'Travel Scenarios')"
-              disabled={isLoading}
-              {...register("question", { required: "Please enter a topic" })}
-            />
-            {countCacheQuestions > 0 && (
-              <div className="flex flex-col w-full my-2">
-                <label className="text-sm">
-                  Available variations: {countCacheQuestions}
-                </label>
-                <select
-                  className="border p-2 bg-white"
-                  value={selectedCacheIndex}
-                  onChange={(e) =>
-                    setSelectedCacheIndex(Number(e.target.value))
-                  }
-                  disabled={isLoading || countCacheQuestions === 0}
-                  title="Select which variation to use"
-                >
-                  {Array.from({ length: countCacheQuestions }, (_, i) => (
-                    <option key={i} value={i}>
-                      Variation {i + 1}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex space-x-2">
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              disabled={isLoading}
-            >
-              {isLoading ? "Generating..." : "Generate Listening Quiz"}
-            </button>
-            <button
-              type="button"
-              onClick={handleGetFromCache}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              disabled={isLoading}
-            >
-              {isLoading ? "Loading..." : "Get from cache"}
-            </button>
-          </div>
-        </form>
+      {/* Model Selection */}
+      <div className="mb-4 bg-white rounded-lg p-4 shadow-sm">
+        <ModelSelector
+          type="chat"
+          defaultModel={DEFAULT_CHAT_MODEL}
+          onChange={setSelectedModel}
+          showFullList={false}
+          pageName="quiz-listening"
+        />
       </div>
-      
+
+      {/* Controls */}
+      <div className="flex space-x-2 mb-2">
+        <Button
+          onClick={() => setShowCachedQuestions(!showCachedQuestions)}
+          variant="default"
+          size="small"
+        >
+          {showCachedQuestions ? "Hide History" : "Show History"}
+        </Button>
+      </div>
+
+      {/* Cached questions history */}
+      {showCachedQuestions && cachedQuestions.length > 0 && (
+        <div className="mb-3 border rounded p-2 bg-gray-50">
+          <h3 className="text-sm font-medium mb-1">Previous Questions:</h3>
+          <div className="max-h-40 overflow-y-auto">
+            {cachedQuestions.map((question, index) => (
+              <button
+                key={index}
+                onClick={() => selectCachedQuestion(question)}
+                className="block w-full text-left p-1 text-sm hover:bg-blue-50 rounded truncate"
+                title={question}
+              >
+                {index + 1}.{" "}
+                {question.length > 50
+                  ? question.substring(0, 50) + "..."
+                  : question}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Form with react-hook-form */}
+      <form
+        onSubmit={handleSubmit((data) => sendMessage(data.question))}
+        className="space-y-2"
+      >
+        <div className="flex flex-col gap-2">
+          <input
+            className="border p-2 w-full"
+            placeholder="Enter a listening topic (e.g., 'Daily Conversations', 'Business English', 'Travel Scenarios')"
+            disabled={isLoading}
+            {...register("question", { required: "Please enter a topic" })}
+          />
+          {countCacheQuestions > 0 && (
+            <div className="flex flex-col w-full my-2">
+              <label className="text-sm">
+                Available variations: {countCacheQuestions}
+              </label>
+              <select
+                className="border p-2 bg-white"
+                value={selectedCacheIndex}
+                onChange={(e) => setSelectedCacheIndex(Number(e.target.value))}
+                disabled={isLoading || countCacheQuestions === 0}
+                title="Select which variation to use"
+              >
+                {Array.from({ length: countCacheQuestions }, (_, i) => (
+                  <option key={i} value={i}>
+                    Variation {i + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="flex space-x-2">
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Generating..." : "Generate Listening Quiz"}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleGetFromCache}
+            disabled={isLoading}
+            variant="secondary"
+          >
+            {isLoading ? "Loading..." : "Get from cache"}
+          </Button>
+        </div>
+      </form>
+
       {quizData && <QuizListening />}
     </>
   );

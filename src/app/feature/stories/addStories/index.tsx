@@ -1,6 +1,7 @@
 import { Story } from "@/types/story";
 import Dialog from "@/components/Dialog";
 import { Dispatch, SetStateAction, useState } from "react";
+import Button from "@/components/Button";
 
 interface AddStoriesProps {
   isAddStoryDialogOpen: boolean;
@@ -122,24 +123,21 @@ const AddStories = (props: AddStoriesProps) => {
                 </div>
               )}
             </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={onCloseAddStoryDialog}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
+            <div className="flex w-full">
+              <Button
                 onClick={handleAddStory}
                 disabled={isSubmitting || !newStory.title || !newStory.content}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${
-                  isSubmitting || !newStory.title || !newStory.content
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
+                variant="primary"
               >
                 {isSubmitting ? "Saving..." : "Save Story"}
-              </button>
+              </Button>
+              <Button
+                onClick={onCloseAddStoryDialog}
+                variant="danger"
+                className="ml-auto"
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         }

@@ -1,6 +1,7 @@
 'use client';
 
 "use client"; 
+import Button from '@/components/Button';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
 export default function RecordPage() {
@@ -27,12 +28,12 @@ export default function RecordPage() {
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-4">Speech to Text (Web Speech API)</h1>
-      <button
+      <Button
         onClick={toggleListening}
-        className={`px-4 py-2 text-white rounded ${isListening ? 'bg-red-600' : 'bg-green-600'}`}
+        variant="primary"
       >
         {isListening ? 'Stop Listening' : 'Start Listening'}
-      </button>
+      </Button>
 
       <div className="mt-4 p-4 border rounded bg-gray-100">
         <strong>Transcript:</strong>

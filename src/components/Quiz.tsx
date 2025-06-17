@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import QuizQuestion from "./QuizQuestion";
 import Dialog from "./Dialog";
 import { useQuizStore } from "@/store/quizStore";
+import Button from "./Button";
 
 export default function Quiz() {
   // Get quizData and allQuizData from global store
@@ -67,30 +68,31 @@ export default function Quiz() {
         footer={
           <div className="flex gap-1 w-full">
             {!showResults ? (
-              <button
+              <Button
                 onClick={checkAnswers}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                variant="secondary"
                 disabled={
                   Object.keys(userAnswers).length <
                   activeQuizData.questions.length
                 }
               >
                 Check Answers
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 onClick={resetQuiz}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                variant="primary"
               >
                 Try Again
-              </button>
+              </Button>
             )}
-            <button
+            <Button
               onClick={() => setIsQuizDialogOpen(false)}
-              className="ml-auto px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+              variant="danger"
+              className="ml-auto"
             >
               Close
-            </button>
+            </Button>
           </div>
         }
       >

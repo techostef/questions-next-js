@@ -9,6 +9,7 @@ import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 import Quiz from "./Quiz";
 import { Questions, useQuizStore } from "@/store/quizStore";
 import { v4 as uuidv4 } from "uuid";
+import Button from "./Button";
 
 // Questions interface is now imported from the quizStore
 
@@ -189,12 +190,13 @@ const AskQuestion = () => {
 
         {/* Controls */}
         <div className="flex space-x-2 mb-2">
-          <button
+          <Button
             onClick={() => setShowCachedQuestions(!showCachedQuestions)}
-            className="px-2 py-1 bg-blue-100 hover:bg-blue-200 rounded text-sm"
+            variant="default"
+            size="small"
           >
             {showCachedQuestions ? "Hide History" : "Show History"}
-          </button>
+          </Button>
         </div>
 
         {/* Cached questions history */}
@@ -261,21 +263,20 @@ const AskQuestion = () => {
             </div>
           )}
           <div className="flex space-x-2">
-            <button
+            <Button
               type="submit"
-              className="px-4 py-2 bg-blue-500 text-white"
               disabled={isLoading}
             >
               {isLoading ? "Sending..." : "Generate Quiz"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => handleGetAllFromCache()}
-              className="px-4 py-2 bg-blue-500 text-white"
               disabled={isLoading}
+              variant="secondary"
             >
               {isLoading ? "Sending..." : "Get from all cache"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

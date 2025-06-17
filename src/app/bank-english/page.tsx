@@ -10,6 +10,7 @@ import { Sound } from "@/assets/sound";
 import { EnglishWord, useVocabulary, VOCABULARY_QUERY_KEY } from "@/hooks/useVocabulary";
 import { useQueryClient } from "@tanstack/react-query";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
+import Button from "@/components/Button";
 
 // Now using the EnglishWord interface from useVocabulary hook
 
@@ -190,12 +191,12 @@ export default function BankEnglishPage() {
           <h1 className="text-3xl font-bold text-center flex-grow">
             English Vocabulary Bank
           </h1>
-          <button
+          <Button
             onClick={() => setIsAddDialogOpen(true)}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+            variant="secondary"
           >
             Add Words
-          </button>
+          </Button>
         </div>
         
         {/* Search bar */}
@@ -209,28 +210,28 @@ export default function BankEnglishPage() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             {searchQuery && (
-              <button
+              <div
                 onClick={() => handleSearch('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                className="cursor-pointer absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
               >
                 ×
-              </button>
+              </div>
             )}
           </div>
           {isSearching && (
             <div className="mt-2 text-sm text-gray-600">
               Found {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
               {searchResults.length > 0 && 
-                <button 
+                <span 
                   onClick={() => {
                     setIsSearching(false);
                     setSearchQuery('');
                     setSearchResults([]);
                   }}
-                  className="ml-2 text-blue-500 hover:text-blue-700 underline"
+                  className="ml-2 cursor-pointer text-blue-500 hover:text-blue-700 underline"
                 >
                   Clear search
-                </button>
+                </span>
               }
             </div>
           )}
@@ -257,12 +258,12 @@ export default function BankEnglishPage() {
         ) : error ? (
           <div className="bg-red-50 p-4 rounded-lg text-red-600 text-center">
             <p>{error}</p>
-            <button
+            <Button
               onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+              variant="primary"
             >
               Try Again
-            </button>
+            </Button>
           </div>
         ) : words.length > 0 ? (
           <div className="mb-8">
@@ -276,30 +277,30 @@ export default function BankEnglishPage() {
                       : `Word ${currentIndex + 1} of ${words.length}`}
                   </span>
                   <div className="flex justify-end space-x-2">
-                    <button
+                    <Button
                       onClick={goToFirst}
-                      className={`px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors`}
+                      variant="primary"
                     >
                       First
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={goToPrevious}
-                      className={`px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors`}
+                      variant="primary"
                     >
                       Previous
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={goToNext}
-                      className={`px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors`}
+                      variant="primary"
                     >
                       Next
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={goToRandom}
-                      className={`px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors`}
+                      variant="primary"
                     >
                       Random
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -307,13 +308,13 @@ export default function BankEnglishPage() {
                   <h2 className="text-3xl font-bold text-blue-600">
                     {currentWord.word}
                   </h2>
-                  <button
+                  <div
                     onClick={() => speakCurrentWord(currentWord.word)}
-                    className="p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
+                    className="cursor-pointer p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
                     title="Listen to pronunciation and meaning"
                   >
                     <Sound />
-                  </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -322,12 +323,13 @@ export default function BankEnglishPage() {
                       <h3 className="text-lg font-semibold text-gray-700">
                         Definition
                       </h3>
-                      <button
+                      <Button
                         onClick={() => setShowMeaning(!showMeaning)}
-                        className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 transition-colors"
+                        variant="default"
+                        size="small"
                       >
                         {showMeaning ? "Hide" : "Show"}
-                      </button>
+                      </Button>
                     </div>
                     {showMeaning ? (
                       <p className="text-gray-600 mb-4 animate-fade-in">
@@ -383,13 +385,13 @@ export default function BankEnglishPage() {
                         <span className="font-medium">
                           {currentWord.v1 || currentWord.word}
                         </span>
-                        <button
+                        <div
                           onClick={() => speakCurrentWord(currentWord.v1 || currentWord.word)}
-                          className="max-w-fit p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
+                          className="cursor-pointer max-w-fit p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
                           title="Listen to pronunciation and meaning"
                         >
                           <Sound />
-                        </button>
+                        </div>
                       </div>
                       <div className="p-2 bg-gray-50 rounded flex flex-col">
                         <span className="block text-xs text-gray-500">
@@ -398,13 +400,13 @@ export default function BankEnglishPage() {
                         <span className="font-medium">
                           {currentWord.v2 || "-"}
                         </span>
-                        <button
+                        <div
                           onClick={() => speakCurrentWord(currentWord.v2 || "-")}
-                          className="max-w-fit p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
+                          className="cursor-pointer max-w-fit p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
                           title="Listen to pronunciation and meaning"
                         >
                           <Sound />
-                        </button>
+                        </div>
                       </div>
                       <div className="p-2 bg-gray-50 rounded flex flex-col">
                         <span className="block text-xs text-gray-500">
@@ -413,13 +415,13 @@ export default function BankEnglishPage() {
                         <span className="font-medium">
                           {currentWord.v3 || "-"}
                         </span>
-                        <button
+                        <div
                           onClick={() => speakCurrentWord(currentWord.v3 || "-")}
-                          className="max-w-fit p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
+                          className="cursor-pointer max-w-fit p-2 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
                           title="Listen to pronunciation and meaning"
                         >
                           <Sound />
-                        </button>
+                        </div>
                       </div>
                     </div>
 
@@ -432,15 +434,15 @@ export default function BankEnglishPage() {
                           <div className="p-2 pb-0 bg-blue-50 rounded">
                             {currentWord.exampleSentence1}
                           </div>
-                          <button
+                          <div
                             onClick={() =>
                               speakCurrentWord(currentWord.exampleSentence1)
                             }
-                            className="p-2 rounded-full hover:bg-blue-200 transition-colors"
+                            className="cursor-pointer p-2 rounded-full hover:bg-blue-200 transition-colors"
                             title="Listen to pronunciation and meaning"
                           >
                             <Sound />
-                          </button>
+                          </div>
                         </div>
                       )}
                       {currentWord.exampleSentence2 && (
@@ -448,15 +450,15 @@ export default function BankEnglishPage() {
                           <div className="p-2 pb-0 bg-blue-50 rounded">
                             {currentWord.exampleSentence2}
                           </div>
-                          <button
+                          <div
                             onClick={() =>
                               speakCurrentWord(currentWord.exampleSentence2)
                             }
-                            className="p-2 rounded-full hover:bg-blue-200 transition-colors"
+                            className="cursor-pointer p-2 rounded-full hover:bg-blue-200 transition-colors"
                             title="Listen to pronunciation and meaning"
                           >
                             <Sound />
-                          </button>
+                          </div>
                         </div>
                       )}
                       {currentWord.exampleSentence3 && (
@@ -464,15 +466,15 @@ export default function BankEnglishPage() {
                           <div className="p-2 pb-0 bg-blue-50 rounded">
                             {currentWord.exampleSentence3}
                           </div>
-                          <button
+                          <div
                             onClick={() =>
                               speakCurrentWord(currentWord.exampleSentence3)
                             }
-                            className="p-2 rounded-full hover:bg-blue-200 transition-colors"
+                            className="cursor-pointer p-2 rounded-full hover:bg-blue-200 transition-colors"
                             title="Listen to pronunciation and meaning"
                           >
                             <Sound />
-                          </button>
+                          </div>
                         </div>
                       )}
                       {!currentWord.exampleSentence1 &&
@@ -490,28 +492,20 @@ export default function BankEnglishPage() {
 
             {/* Navigation buttons for mobile view */}
             <div className="mt-6 flex justify-center space-x-4 md:hidden">
-              <button
+              <Button
                 onClick={goToPrevious}
                 disabled={currentIndex === 0}
-                className={`px-6 py-2 rounded-full ${
-                  currentIndex === 0
-                    ? "bg-gray-200 text-gray-500"
-                    : "bg-blue-500 text-white hover:bg-blue-600"
-                } transition-colors`}
+                variant="primary"
               >
                 ← Previous
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={goToNext}
                 disabled={currentIndex === words.length - 1}
-                className={`px-6 py-2 rounded-full ${
-                  currentIndex === words.length - 1
-                    ? "bg-gray-200 text-gray-500"
-                    : "bg-blue-500 text-white hover:bg-blue-600"
-                } transition-colors`}
+                variant="primary"
               >
                 Next →
-              </button>
+              </Button>
             </div>
           </div>
         ) : (

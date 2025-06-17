@@ -4,6 +4,7 @@ import AskQuestion from "@/components/AskQuestion";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
+import Button from "@/components/Button";
 
 export default function QuizPage() {
   const { user, logout } = useAuth();
@@ -16,12 +17,13 @@ export default function QuizPage() {
           <h1 className="text-2xl font-bold ml-1">English Quiz</h1>
           <div className="flex items-center">
             <span className="mr-2">Welcome, {user?.username}</span>
-            <button
+            <Button
               onClick={logout}
-              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+              variant="danger"
+              size="small"
             >
               Logout
-            </button>
+            </Button>
           </div>
         </div>
 

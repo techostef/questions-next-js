@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import Button from '@/components/Button';
 
 // Wrapper component with Suspense boundary
 export default function LoginPage() {
@@ -96,12 +97,12 @@ function LoginContent() {
           )}
 
           <div>
-            <button
+            <Button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              variant="primary"
             >
               Sign in
-            </button>
+            </Button>
           </div>
           <div className="text-sm text-center">
             <p className="text-gray-500">

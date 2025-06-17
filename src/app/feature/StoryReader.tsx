@@ -2,6 +2,7 @@
 
 import React, { useCallback } from 'react';
 import { useBasicRecorder } from '@/hooks/useBasicRecorder';
+import Button from '@/components/Button';
 
 export interface StoryReaderProps {
   storyText: string;
@@ -80,17 +81,15 @@ export const StoryReader: React.FC<StoryReaderProps> = ({
 
   return (
     <div className="w-full flex flex-col items-center">
-      <button
+      <Button
         onClick={isRecording ? handleStopReading : handleStartReading}
         disabled={disabled || externalIsReading}
-        className={`px-4 py-2 ml-auto mr-auto rounded-lg transition-colors ${isRecording ? 
-          "bg-red-500 text-white hover:bg-red-600" : 
-          "bg-blue-500 text-white hover:bg-blue-600"} ${(disabled || externalIsReading) ? "opacity-50 cursor-not-allowed" : ""}`}
+        variant={isRecording ? "danger" : "primary"}
       >
         {isRecording 
           ? "Stop Reading" 
           : "Start Reading"}
-      </button>
+      </Button>
       
       {isRecording && (
         <div className="flex ml-auto mr-auto items-center mt-2 text-red-500">

@@ -1,3 +1,4 @@
+import Button from "@/components/Button";
 import { ReadingAttempt, Story } from "@/types/story";
 
 interface Props {
@@ -17,12 +18,13 @@ export default function HistoryAttempts({
         <div className="mt-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-xl font-medium">Your Reading History</h2>
-            <button
+            <Button
               onClick={clearReadingHistory}
-              className="px-3 py-1 bg-red-50 text-red-600 rounded-md border border-red-200 hover:bg-red-100 transition-colors text-sm font-medium"
+              variant="danger"
+              size="small"
             >
               Clear History
-            </button>
+            </Button>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full">

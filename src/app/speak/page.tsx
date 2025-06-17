@@ -435,14 +435,14 @@ export default function StreamPage() {
                         {msg.role === "user" ? "You" : "AI Assistant"}
                       </span>
                       {msg.role === "assistant" && (
-                        <button
+                        <div
                           onClick={() => msg.ssml ? speak(msg.ssml, true) : speak(msg.content)}
                           className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-gray-200 transition-colors"
                           title="Play audio again"
                           aria-label="Play message audio"
                         >
                           <Sound />
-                        </button>
+                        </div>
                       )}
                     </div>
                     <div>

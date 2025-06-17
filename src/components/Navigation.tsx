@@ -1,52 +1,33 @@
 'use client';
 import { useRouter } from "next/navigation";
+import Button from "./Button";
+
+const tabs = [
+  { name: "Quiz", path: "/quiz" },
+  { name: "Listening", path: "/quiz-listening" },
+  { name: "Chat", path: "/chat" },
+  { name: "Speak", path: "/speak" },
+  { name: "Bank English", path: "/bank-english" },
+];
 
 export default function Navigation() {
   const router = useRouter();
   return (
-    <nav className="bg-gray-100 rounded-lg mb-6">
+    <nav className="mb-6">
       <ul className="flex p-2">
-        <li className="mr-6">
-          <button
-            onClick={() => router.push("/quiz")}
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Quiz
-          </button>
-        </li>
-        <li className="mr-6">
-          <button
-            onClick={() => router.push("/quiz-listening")}
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Listening
-          </button>
-        </li>
-        <li className="mr-6">
-          <button
-            onClick={() => router.push("/chat")}
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Chat
-          </button>
-        </li>
-        <li className="mr-6">
-          <button
-            onClick={() => router.push("/speak")}
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Speak
-          </button>
-        </li>
-        <li className="mr-6">
-          <button
-            onClick={() => router.push("/bank-english")}
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Bank English
-          </button>
-        </li>
+        {tabs.map((tab) => (
+          <li className="mr-2" key={tab.path}>
+            <Button
+              onClick={() => router.push(tab.path)}
+              variant="text"
+              size="small"
+            >
+              {tab.name}
+            </Button>
+          </li>
+        ))}
       </ul>
     </nav>
   );
 }
+

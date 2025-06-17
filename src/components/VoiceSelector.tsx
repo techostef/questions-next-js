@@ -1,6 +1,7 @@
 'use client';
 
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
+import Button from './Button';
 
 interface VoiceSelectorProps {
   onChange?: (voiceType: 'default' | 'male' | 'female') => void;
@@ -24,36 +25,27 @@ export default function VoiceSelector({ onChange }: VoiceSelectorProps) {
       <div className="flex items-center">
         <span className="mr-3 font-medium">AI Voice:</span>
         <div className="flex space-x-2">
-          <button
+          <Button
             onClick={() => handleVoiceChange('default')}
-            className={`px-3 py-1 rounded ${
-              voiceType === 'default'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200'
-            }`}
+            variant={voiceType === 'default' ? 'primary' : 'default'}
+            size="small"
           >
             Default
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => handleVoiceChange('male')}
-            className={`px-3 py-1 rounded ${
-              voiceType === 'male'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200'
-            }`}
+            variant={voiceType === 'male' ? 'primary' : 'default'}
+            size="small"
           >
             Male
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => handleVoiceChange('female')}
-            className={`px-3 py-1 rounded ${
-              voiceType === 'female'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200'
-            }`}
+            variant={voiceType === 'female' ? 'primary' : 'default'}
+            size="small"
           >
             Female
-          </button>
+          </Button>
         </div>
       </div>
     </div>

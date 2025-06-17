@@ -1,5 +1,6 @@
 'use client';
 
+import Button from '@/components/Button';
 import { useEffect, useRef, useState } from 'react';
 
 export default function RecordPage() {
@@ -51,12 +52,12 @@ export default function RecordPage() {
       {!isClient && <p>Loading...</p>}
       {isClient && (
         <>
-          <button
+          <Button
             onClick={recording ? stopRecording : startRecording}
-            className="px-4 py-2 bg-blue-600 text-white rounded mr-2"
+            variant={recording ? "danger" : "primary"}
           >
             {recording ? 'Stop Recording' : 'Start Recording'}
-          </button>
+          </Button>
 
           {audioURL && (
             <div className="mt-4">

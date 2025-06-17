@@ -19,6 +19,7 @@ import ReactMarkdown from "react-markdown";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
+import Button from "@/components/Button";
 
 interface Message {
   role: "user" | "assistant";
@@ -274,12 +275,13 @@ export default function ChatPage() {
           <h1 className="text-2xl font-bold ml-1">Conversation with AI</h1>
           <div className="flex items-center">
             <span className="mr-2">Welcome, {user?.username}</span>
-            <button
+            <Button
               onClick={logout}
-              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+              variant="danger"
+              size="small"
             >
               Logout
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -314,13 +316,13 @@ export default function ChatPage() {
                         <ReactMarkdown>
                           {message.content}
                         </ReactMarkdown>
-                        <button
+                        <div
                           onClick={() => speak(message.content)}
-                          className="mt-2 text-gray-500 hover:text-gray-700 inline-flex items-center"
+                          className="cursor-pointer mt-2 text-gray-500 hover:text-gray-700 inline-flex items-center"
                           title="Listen to this response"
                         >
                           <Sound />
-                        </button>
+                        </div>
                       </div>
                     ) : (
                       message.content
@@ -362,17 +364,18 @@ export default function ChatPage() {
           
           {messages.length > 0 && (
             <div className="border-t border-gray-200 p-2 bg-gray-50">
-              <button
+              <Button
                 onClick={() => {
                   if (typeof window !== "undefined") {
                     localStorage.removeItem("ai_conversation_history");
                     setMessages([]);
                   }
                 }}
-                className="text-sm text-red-500 hover:text-red-700"
+                className="w-full"
+                variant="danger"
               >
                 Clear Conversation History
-              </button>
+              </Button>
             </div>
           )}
 
@@ -398,13 +401,13 @@ export default function ChatPage() {
                 placeholder="Type your message..."
                 disabled={isLoading}
               />
-              <button
+              <Button
                 type="submit"
                 disabled={isLoading || !input.trim()}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                variant="primary"
               >
                 Send
-              </button>
+              </Button>
             </div>
           </form>
         </div>

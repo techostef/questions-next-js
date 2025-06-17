@@ -1,3 +1,4 @@
+import Button from "@/components/Button";
 import { Story, StoryPart } from "@/types/story";
 import { useState } from "react";
 
@@ -35,61 +36,53 @@ const ControlStories = ({
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-medium">Current Story</h2>
         <div className="flex space-x-2">
-          <button
+          <Button
             onClick={() => setIsAddStoryDialogOpen(true)}
-            className="px-4 py-2 bg-green-50 text-green-600 rounded-md border border-green-200 hover:bg-green-100 transition-colors"
+            variant="primary"
           >
             Add Story
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               setIsCustomStory(false);
               if (!isRecording && !isReading) {
                 setIsStoryDialogOpen(true);
               }
             }}
-            className={`px-4 py-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors ${
-              isRecording || isReading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            variant="primary"
             disabled={isRecording || isReading}
           >
             Change Story
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setIsCustomStory(true)}
-            className={`px-4 py-2 bg-yellow-50 text-yellow-600 rounded-md border border-yellow-200 hover:bg-yellow-100 transition-colors ${
-              isRecording || isReading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            variant="primary"
             disabled={isRecording || isReading}
           >
             Custom Story
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Current story card */}
       {isCustomStory && (
-        <div className="mb-6 p-4 rounded-lg border border-yellow-500 bg-yellow-50">
+        <div className="mb-6 p-4 rounded-lg border border-blue-500 bg-blue-50">
           <h4 className="text-md font-medium mb-2">Add to Story</h4>
           <textarea
             value={userInputText}
             onChange={(e) => setUserInputText(e.target.value)}
             placeholder="Type your text to add to the story..."
-            className="w-full p-3 rounded-md mb-3 min-h-[100px] bg-white border border-yellow-500"
+            className="w-full p-3 rounded-md mb-3 min-h-[100px] bg-white border border-blue-500"
             disabled={isRecording || isReading}
           />
           <div className="flex justify-end">
-            <button
+            <Button
               onClick={() => handleCustomStorySubmission(userInputText)}
               disabled={!userInputText.trim() || isRecording || isReading}
-              className={`px-4 py-2 rounded-md ${
-                !userInputText.trim() || isRecording || isReading
-                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                  : "bg-blue-500 text-white hover:bg-blue-600"
-              }`}
+              variant="primary"
             >
               Submit Text
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -170,54 +163,42 @@ const ControlStories = ({
 
             {!isFullStoryView && (
               <div className="flex justify-between items-center">
-                <button
+                <Button
                   onClick={() => setPartIndexWithCache(selectedPartIndex - 1)}
                   disabled={selectedPartIndex === 0 || isRecording || isReading}
-                  className={`px-2 py-1 rounded ${
-                    selectedPartIndex === 0 || isRecording || isReading
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                  }`}
+                  variant="primary"
+                  size="small"
                 >
                   ← Previous
-                </button>
+                </Button>
 
                 <div className="flex space-x-1">
                   {storyParts.map((_, index) => (
-                    <button
+                    <Button
                       key={index}
                       onClick={() => setPartIndexWithCache(index)}
                       disabled={isRecording || isReading}
-                      className={`w-6 h-6 rounded-full text-xs flex items-center justify-center ${
-                        selectedPartIndex === index
-                          ? "bg-blue-500 text-white"
-                          : isRecording || isReading
-                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                      }`}
-                    >
+                      className="rounded-full"
+                      variant="primary"
+                      size="small"
+                  >
                       {index + 1}
-                    </button>
+                    </Button>
                   ))}
                 </div>
 
-                <button
+                <Button
                   onClick={() => setPartIndexWithCache(selectedPartIndex + 1)}
                   disabled={
                     selectedPartIndex === storyParts.length - 1 ||
                     isRecording ||
                     isReading
                   }
-                  className={`px-2 py-1 rounded ${
-                    selectedPartIndex === storyParts.length - 1 ||
-                    isRecording ||
-                    isReading
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                  }`}
+                  variant="primary"
+                  size="small"
                 >
                   Next →
-                </button>
+                </Button>
               </div>
             )}
           </div>

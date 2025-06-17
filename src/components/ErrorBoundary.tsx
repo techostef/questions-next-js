@@ -2,6 +2,7 @@
 
 import { sendErrorToServer } from '@/lib/error';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import Button from './Button';
 
 interface Props {
   children: ReactNode;
@@ -45,12 +46,12 @@ class ErrorBoundary extends Component<Props, State> {
         <div className="p-6 bg-red-50 rounded-lg shadow-md mx-auto my-8 max-w-md">
           <h2 className="text-2xl font-semibold text-red-700 mb-4">Something went wrong</h2>
           <p className="text-gray-700 mb-4">The application encountered an error. We&apos;ve been notified and will look into it.</p>
-          <button
+          <Button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+            variant="primary"
           >
             Try again
-          </button>
+          </Button>
           {this.state.error && process.env.NODE_ENV === 'development' && (
             <div className="mt-4 p-3 bg-gray-100 rounded overflow-auto max-h-60">
               <p className="font-mono text-sm text-gray-800">{this.state.error.toString()}</p>
