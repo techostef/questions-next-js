@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getModelsByType, getRecommendedModelsByType } from '@/constants/listModelsOpenAI';
+import Select from './Select';
 
 interface ModelSelectorProps {
   type: 'chat' | 'audio' | 'both';
@@ -67,22 +68,16 @@ export default function ModelSelector({
   return (
     <div className={`flex flex-col space-y-2 ${className}`}>
       <div className="flex items-center space-x-2">
-        <label htmlFor="model-selector" className="text-sm font-medium text-gray-700">
+        <label htmlFor="model-selector" className="whitespace-nowrap text-sm font-medium text-gray-700">
           {type === 'chat' ? 'Chat Model:' : type === 'audio' ? 'Audio Model:' : 'AI Model:'}
         </label>
-        <select
+        <Select
           id="model-selector"
           value={selectedModel}
           onChange={handleChange}
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-        >
-          <option value="" disabled>Select a model</option>
-          {models.map((model) => (
-            <option key={model.name} value={model.name}>
-              {model.name} {model.isRecommended ? '(Recommended)' : ''}
-            </option>
-          ))}
-        </select>
+          className='w-full'
+          options={models.map((model) => ({ value: model.name, label: model.name }))}
+        />
       </div>
       
       <div className="flex justify-end">

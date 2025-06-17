@@ -1,18 +1,16 @@
 "use client";
 
 import { cleanUpResult } from "@/lib/string";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
-import QuizListening from "./QuizListening";
-import {
-  ListeningQuizData,
-  useQuizListeningStore,
-} from "@/store/quizListeningStore";
+import { useQuizListeningStore, ListeningQuizData } from "@/store/quizListeningStore";
 import { v4 as uuidv4 } from "uuid";
 import Button from "./Button";
 import Input from "./Input";
+import Select from "./Select";
+import QuizListening from "./QuizListening";
 
 export interface AskListeningQuestionMethods {
   sendMessage: (customPrompt?: string) => Promise<void>;
@@ -115,7 +113,7 @@ const AskListeningQuestion = () => {
     if (listeningData && questionValue && listeningData[questionValue]) {
       const newData: ListeningQuizData[] = [];
       for (const value of listeningData[questionValue]) {
-        newData.push(cleanUpResult(value));
+        newData.push(cleanUpResult(value) as ListeningQuizData);
       }
       setAllQuizData(newData);
     }
@@ -169,7 +167,7 @@ const AskListeningQuestion = () => {
       setListeningData((prevData) => ({
         ...prevData,
         [prompt]: [...(prevData[prompt] || []), data],
-      }));
+      } as Record<string, Array<unknown>>));
 
       updateCountCacheQuestions(prompt);
     } catch (error) {
@@ -248,19 +246,16 @@ const AskListeningQuestion = () => {
               <label className="text-sm">
                 Available variations: {countCacheQuestions}
               </label>
-              <select
-                className="border p-2 bg-white"
+              <Select
                 value={selectedCacheIndex}
                 onChange={(e) => setSelectedCacheIndex(Number(e.target.value))}
                 disabled={isLoading || countCacheQuestions === 0}
                 title="Select which variation to use"
-              >
-                {Array.from({ length: countCacheQuestions }, (_, i) => (
-                  <option key={i} value={i}>
-                    Variation {i + 1}
-                  </option>
-                ))}
-              </select>
+                options={Array.from({ length: countCacheQuestions }, (_, i) => ({
+                  value: i,
+                  label: `Variation ${i + 1}`
+                }))}
+              />
             </div>
           )}
         </div>

@@ -3,6 +3,7 @@ import Dialog from "@/components/Dialog";
 import { Dispatch, SetStateAction, useState } from "react";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import Select from "@/components/Select";
 
 interface AddStoriesProps {
   isAddStoryDialogOpen: boolean;
@@ -174,9 +175,9 @@ const AddStories = (props: AddStoriesProps) => {
             >
               Difficulty
             </label>
-            <select
+            <Select
               id="difficulty"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full"
               value={newStory.difficulty}
               onChange={(e) =>
                 setNewStory({
@@ -187,11 +188,12 @@ const AddStories = (props: AddStoriesProps) => {
                     | "advanced",
                 })
               }
-            >
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-            </select>
+              options={[
+                { value: "beginner", label: "Beginner" },
+                { value: "intermediate", label: "Intermediate" },
+                { value: "advanced", label: "Advanced" },
+              ]}
+            />
           </div>
 
           <div>

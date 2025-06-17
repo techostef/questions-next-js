@@ -11,6 +11,7 @@ import { Questions, useQuizStore } from "@/store/quizStore";
 import { v4 as uuidv4 } from "uuid";
 import Button from "./Button";
 import Input from "./Input";
+import Select from "./Select";
 
 // Questions interface is now imported from the quizStore
 
@@ -240,21 +241,16 @@ const AskQuestion = () => {
                 <label className="text-sm">
                   Max index: {countCacheQuestions}
                 </label>
-                <select
-                  className="border p-2 bg-white"
+                <Select
                   value={selectedCacheIndex}
-                  onChange={(e) =>
-                    setSelectedCacheIndex(Number(e.target.value))
-                  }
+                  onChange={(e) => setSelectedCacheIndex(Number(e.target.value))}
                   disabled={isLoading || countCacheQuestions === 0}
                   title="Select which cache entry to use"
-                >
-                  {Array.from({ length: countCacheQuestions }, (_, i) => (
-                    <option key={i} value={i}>
-                      {i + 1}
-                    </option>
-                  ))}
-                </select>
+                  options={Array.from({ length: countCacheQuestions }, (_, i) => ({
+                    value: i,
+                    label: `${i + 1}`
+                  }))}
+                />
               </div>
             )}
           </div>
