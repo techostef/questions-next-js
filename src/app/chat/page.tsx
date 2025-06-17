@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -61,17 +60,9 @@ export default function ChatPage() {
       setMessages(cachedMessages);
     }
   }, []);
-  const { isAuthenticated, user, logout } = useAuth();
-  const router = useRouter();
+  const { user, logout } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-
-  // If not authenticated, redirect to login page
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/");
-    }
-  }, [isAuthenticated, router]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -274,11 +265,6 @@ export default function ChatPage() {
       setIsLoading(false);
     }
   };
-
-  // Show nothing while checking authentication
-  if (!isAuthenticated) {
-    return null;
-  }
 
   return (
     <ProtectedRoute>

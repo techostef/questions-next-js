@@ -1,27 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import AskQuestion from "@/components/AskQuestion";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
 
 export default function QuizPage() {
-  const { isAuthenticated, user, logout } = useAuth();
-  const router = useRouter();
-
-  // If not authenticated, redirect to login page
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/");
-    }
-  }, [isAuthenticated, router]);
-
-  // Show nothing while checking authentication
-  if (!isAuthenticated) {
-    return null;
-  }
+  const { user, logout } = useAuth();
 
   return (
     <ProtectedRoute>
