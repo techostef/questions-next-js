@@ -1,7 +1,7 @@
 "use client";
 
 import { cleanUpResult } from "@/lib/string";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
@@ -66,6 +66,13 @@ const AskListeningQuestion = () => {
     loadCategories();
   }, []);
 
+  const updateCountCacheQuestions = useCallback((customQuestion?: string) => {
+    setCountCacheQuestions(
+      listeningData?.[customQuestion || questionValue]?.length || 0
+    );
+    setSelectedCacheIndex(0);
+  }, [listeningData, questionValue, setSelectedCacheIndex]);
+
   useEffect(() => {
     if (listeningData && questionValue && listeningData[questionValue]) {
       const cleanedResult = cleanUpResult(
@@ -79,14 +86,9 @@ const AskListeningQuestion = () => {
         15
       )}-${uuidv4().substring(0, 8)}`;
       addQuizToCollection(quizId, cleanedResult);
+      updateCountCacheQuestions(questionValue);
     }
-  }, [
-    listeningData,
-    questionValue,
-    selectedCacheIndex,
-    setQuizData,
-    addQuizToCollection,
-  ]);
+  }, [listeningData, questionValue, selectedCacheIndex, setQuizData, addQuizToCollection, updateCountCacheQuestions]);
 
   const handleGetFromCache = async () => {
     try {
@@ -118,13 +120,6 @@ const AskListeningQuestion = () => {
       setAllQuizData(newData);
     }
   }, [listeningData, questionValue, setAllQuizData]);
-
-  const updateCountCacheQuestions = async (customQuestion?: string) => {
-    setCountCacheQuestions(
-      listeningData?.[customQuestion || questionValue]?.length || 0
-    );
-    setSelectedCacheIndex(0);
-  };
 
   // Function to select a cached question
   const selectCachedQuestion = (question: string) => {

@@ -76,6 +76,13 @@ const AskQuestion = () => {
     loadCategories();
   }, []);
 
+  const updateCountCacheQuestions = useCallback((customQuestion?: string) => {
+    setCountCacheQuestions(
+      data?.[customQuestion || questionValue]?.length || 0
+    );
+    setSelectedCacheIndex(0);
+  }, [data, questionValue]);
+
   useEffect(() => {
     if (data && questionValue && data[questionValue]) {
       const cleanedResult = cleanUpResult(
@@ -89,6 +96,7 @@ const AskQuestion = () => {
         15
       )}-${uuidv4().substring(0, 8)}`;
       addQuizToCollection(quizId, cleanedResult);
+      updateCountCacheQuestions(questionValue);
     }
   }, [
     data,
@@ -96,6 +104,7 @@ const AskQuestion = () => {
     selectedCacheIndex,
     setQuizData,
     addQuizToCollection,
+    updateCountCacheQuestions,
   ]);
 
   useEffect(() => {
@@ -108,20 +117,12 @@ const AskQuestion = () => {
     }
   }, [data, questionValue, setAllQuizData]);
 
-  const updateCountCacheQuestions = useCallback((customQuestion?: string) => {
-    setCountCacheQuestions(
-      data?.[customQuestion || questionValue]?.length || 0
-    );
-    setSelectedCacheIndex(0);
-  }, [data, questionValue]);
-
   // Function to select a cached question
   const selectCachedQuestion = useCallback((question: string) => {
     setValue("question", question);
     setShowCachedQuestions(false);
 
     updateCountCacheQuestions(question);
-    console.log("selectedCacheIndex", selectedCacheIndex)
     if (data[question]?.[selectedCacheIndex]) {
       const cleanedResult = cleanUpResult(
         data[question][selectedCacheIndex]
