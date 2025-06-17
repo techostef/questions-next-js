@@ -1,4 +1,11 @@
 const LIST_CATEGORIES = [
+  'i wanna practice grammar practice a1 level',  
+  'i wanna practice grammar practice a2 level',  
+  'i wanna practice grammar practice b1 level',  
+  'i wanna practice grammar practice b2 level',
+  'i wanna practice grammar practice c1 level',
+  'i wanna practice grammar practice c2 level',
+  'i wanna practice compound words',
   'i wanna practice adjectives and adverbs grammar',
   'i wanna practice adjectives grammar',
   'i wanna practice adverb grammar',
