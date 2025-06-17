@@ -1,15 +1,20 @@
 import React, { useState, useMemo } from "react";
-import QuizQuestion from "./QuizQuestion";
 import Dialog from "./Dialog";
-import { useQuizStore } from "@/store/quizStore";
+import { useQuizListeningStore } from "@/store/quizListeningStore";
+import QuizListeningQuestion from "./QuizListeningQuestion";
+import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 
-export default function Quiz() {
+export default function QuizListening() {
   // Get quizData and allQuizData from global store
-  const { quizData, allQuizData } = useQuizStore();
+  const { quizData, allQuizData, currentAudioIndex, setCurrentAudioIndex, setIsAudioPlaying } = useQuizListeningStore();
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [showResults, setShowResults] = useState(false);
   const [useAllQuizzes, setUseAllQuizzes] = useState(false);
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  // Initialize speech synthesis hook
+  const { speak, stop, isSupported } = useSpeechSynthesis();
 
   // Combine all questions when useAllQuizzes is true
   const activeQuizData = useMemo(() => {
@@ -51,18 +56,62 @@ export default function Quiz() {
     }, 0);
   };
 
+
+
+  const handlePlayAudio = async (index: number, audioPrompt: string) => {
+    try {
+      // If already playing this audio, pause it
+      if (currentAudioIndex === index && isPlaying) {
+        stop();
+        setIsPlaying(false);
+        setIsAudioPlaying(false);
+        return;
+      }
+      
+      // Stop any currently playing audio
+      if (isPlaying) {
+        stop();
+        setIsPlaying(false);
+        setIsAudioPlaying(false);
+      }
+      
+      // Update the current audio index
+      setCurrentAudioIndex(index);
+      
+      // Use speech synthesis to speak the text
+      if (isSupported) {
+        speak(audioPrompt);
+        setIsPlaying(true);
+        setIsAudioPlaying(true);
+
+        // Set up event to detect when speech ends
+        const checkSpeechEnd = setInterval(() => {
+          if (!window.speechSynthesis.speaking) {
+            setIsPlaying(false);
+            setIsAudioPlaying(false);
+            clearInterval(checkSpeechEnd);
+          }
+        }, 100);
+      } else {
+        console.error('Speech synthesis is not supported in this browser');
+      }
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  };
+
   return (
     <>
       <button
         onClick={() => setIsQuizDialogOpen(true)}
         className="mt-4 px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
       >
-        Open Quiz
+        Open Listening Quiz
       </button>
       <Dialog
         isOpen={isQuizDialogOpen}
         onClose={() => setIsQuizDialogOpen(false)}
-        title="Quiz"
+        title="Listening Quiz"
         maxWidth="max-w-4xl"
         footer={
           <div className="flex gap-1 w-full">
@@ -96,8 +145,6 @@ export default function Quiz() {
       >
         <div className="mb-2">
           <div className="flex flex-col items-center mb-4">
-            <h2 className="text-xl">Questions</h2>
-
             {/* Toggle between current quiz and all quizzes */}
             <div className="mb-3">
               <label className="inline-flex items-center cursor-pointer">
@@ -135,9 +182,10 @@ export default function Quiz() {
             style={{ height: "calc(100vh - 350px)" }}
           >
             {activeQuizData.questions.map((question, qIndex) => (
-              <QuizQuestion
+              <QuizListeningQuestion
                 key={qIndex}
                 index={qIndex}
+                audioPrompt={question.audioPrompt}
                 question={question.question}
                 options={question.options}
                 answer={question.answer}
@@ -145,6 +193,8 @@ export default function Quiz() {
                 userAnswer={userAnswers[qIndex]}
                 showResults={showResults}
                 onAnswerSelect={handleAnswerSelect}
+                onPlayAudio={() => handlePlayAudio(qIndex, question.audioPrompt)}
+                isPlaying={currentAudioIndex === qIndex && isPlaying}
               />
             ))}
           </div>

@@ -1,0 +1,61 @@
+import { create } from 'zustand';
+
+// Define the structure for listening quiz questions
+export interface ListeningQuizQuestion {
+  audioPrompt: string;
+  question: string;
+  options: {
+    a: string;
+    b: string;
+    c: string;
+    d: string;
+  };
+  answer: string;
+  reason: string;
+}
+
+// Define the structure for listening quiz data
+export interface ListeningQuizData {
+  questions: ListeningQuizQuestion[];
+}
+
+// Interface for the quiz listening store
+interface QuizListeningStore {
+  quizData: ListeningQuizData | null;
+  allQuizData: ListeningQuizData[];
+  quizCollection: Record<string, ListeningQuizData>;
+  currentAudioIndex: number;
+  isAudioPlaying: boolean;
+  setQuizData: (data: ListeningQuizData | null) => void;
+  setAllQuizData: (data: ListeningQuizData[]) => void;
+  addQuizToCollection: (id: string, data: ListeningQuizData) => void;
+  setCurrentAudioIndex: (index: number) => void;
+  setIsAudioPlaying: (isPlaying: boolean) => void;
+}
+
+// Create the quiz listening store
+const useQuizListeningStore = create<QuizListeningStore>((set) => ({
+  quizData: null,
+  allQuizData: [],
+  quizCollection: {},
+  currentAudioIndex: -1,
+  isAudioPlaying: false,
+  
+  setQuizData: (data) => set({ quizData: data }),
+  
+  setAllQuizData: (data) => set({ allQuizData: data }),
+  
+  addQuizToCollection: (id, data) => 
+    set((state) => ({
+      quizCollection: {
+        ...state.quizCollection,
+        [id]: data
+      }
+    })),
+    
+  setCurrentAudioIndex: (index) => set({ currentAudioIndex: index }),
+  
+  setIsAudioPlaying: (isPlaying) => set({ isAudioPlaying: isPlaying })
+}));
+
+export { useQuizListeningStore };

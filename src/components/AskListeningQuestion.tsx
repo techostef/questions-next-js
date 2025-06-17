@@ -3,61 +3,48 @@
 import { cleanUpResult } from "@/lib/string";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useQuizCache } from "@/hooks/useQuizCache";
 import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
-import Quiz from "./Quiz";
-import { Questions, useQuizStore } from "@/store/quizStore";
+import QuizListening from "./QuizListening";
+import { ListeningQuizData, useQuizListeningStore } from "@/store/quizListeningStore";
 import { v4 as uuidv4 } from "uuid";
 
-// Questions interface is now imported from the quizStore
-
-export interface AskQuestionMethods {
+export interface AskListeningQuestionMethods {
   sendMessage: (customPrompt?: string) => Promise<void>;
   loadDifferentQuiz: () => Promise<void>;
 }
 
-const CACHE_KEY = "english_quiz_cached_questions";
+const CACHE_KEY = "english_listening_quiz_cached_questions";
 const MAX_CACHED_QUESTIONS = 100; // Maximum number of questions to store
 
-const AskQuestion = () => {
+const AskListeningQuestion = () => {
   const [isLoadingMain, setIsLoadingMain] = useState(false);
   const [cachedQuestions, setCachedQuestions] = useState<string[]>([]);
   const [showCachedQuestions, setShowCachedQuestions] = useState(false);
   const [selectedCacheIndex, setSelectedCacheIndex] = useState<number>(0);
   const [countCacheQuestions, setCountCacheQuestions] = useState<number>(0);
-  const [selectedModel, setSelectedModel] =
-    useState<string>(DEFAULT_CHAT_MODEL);
-  // Using global state from Zustand store instead of local state
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_CHAT_MODEL);
+  const [listeningData, setListeningData] = useState<Record<string, Array<unknown>>>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Using global state from Zustand store
   const { quizData, setQuizData, setAllQuizData, addQuizToCollection } =
-    useQuizStore();
-
-  // Initialize the quiz cache hook
-  const {
-    data,
-    getAllFromCache,
-    isLoading: isLoadingAllCache,
-    errorMessage,
-    clearError,
-  } = useQuizCache();
+    useQuizListeningStore();
 
   // Setup react-hook-form
   const {
     register,
     handleSubmit,
     setValue,
-    setError: setFormError,
     watch,
-    formState: { errors },
-    reset,
   } = useForm<{ question: string }>({ defaultValues: { question: "" } });
   const questionValue = watch("question");
 
-  const isLoading = isLoadingMain || isLoadingAllCache;
+  const isLoading = isLoadingMain;
 
   const loadCategories = async () => {
     try {
-      const res = await fetch("/api/categories", {
+      const res = await fetch("/api/categories-listening", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -75,43 +62,71 @@ const AskQuestion = () => {
 
   useEffect(() => {
     loadCategories();
+    // Load cached questions from localStorage
+    const savedQuestions = localStorage.getItem(CACHE_KEY);
+    if (savedQuestions) {
+      try {
+        setCachedQuestions(JSON.parse(savedQuestions));
+      } catch (error) {
+        console.error("Error parsing saved questions:", error);
+        localStorage.removeItem(CACHE_KEY);
+      }
+    }
   }, []);
 
   useEffect(() => {
-    if (data && questionValue && data[questionValue]) {
+    if (listeningData && questionValue && listeningData[questionValue]) {
       const cleanedResult = cleanUpResult(
-        data[questionValue][selectedCacheIndex]
+        listeningData[questionValue][selectedCacheIndex]
       );
       setQuizData(cleanedResult);
 
       // Add to allQuizData collection with unique ID
-      const quizId = `quiz-${questionValue.substring(
+      const quizId = `listening-${questionValue.substring(
         0,
         15
       )}-${uuidv4().substring(0, 8)}`;
       addQuizToCollection(quizId, cleanedResult);
     }
   }, [
-    data,
+    listeningData,
     questionValue,
     selectedCacheIndex,
     setQuizData,
     addQuizToCollection,
   ]);
 
+  const handleGetFromCache = async () => {
+    try {
+      const res = await fetch("/api/quiz-listening", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) {
+        throw new Error("Failed to fetch data");
+      }
+      const data = await res.json();
+      setListeningData(data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
   useEffect(() => {
-    if (data && questionValue && data[questionValue]) {
-      const newData: Questions[] = [];
-      for (const value of data[questionValue]) {
+    if (listeningData && questionValue && listeningData[questionValue]) {
+      const newData: ListeningQuizData[] = [];
+      for (const value of listeningData[questionValue]) {
         newData.push(cleanUpResult(value));
       }
       setAllQuizData(newData);
     }
-  }, [data, questionValue, setAllQuizData]);
+  }, [listeningData, questionValue, setAllQuizData]);
 
   const updateCountCacheQuestions = async (customQuestion?: string) => {
     setCountCacheQuestions(
-      data?.[customQuestion || questionValue]?.length || 0
+      listeningData?.[customQuestion || questionValue]?.length || 0
     );
     setSelectedCacheIndex(0);
   };
@@ -128,60 +143,64 @@ const AskQuestion = () => {
 
   // Update the cached questions list with MRU sorting
   const updateCachedQuestions = (newQuestion: string) => {
-    // Create a new array without the selected question (if it exists)
-    const filteredQuestions = cachedQuestions.filter((q) => q !== newQuestion);
-
-    // Add the question to the beginning (most recently used)
-    const updatedQuestions = [newQuestion, ...filteredQuestions].slice(
-      0,
-      MAX_CACHED_QUESTIONS
-    );
-
-    // Update state and localStorage
-    setCachedQuestions(updatedQuestions);
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(updatedQuestions));
-    } catch (error) {
-      console.error("Error saving cached questions:", error);
-    }
+    setCachedQuestions((prevQuestions) => {
+      // Remove the question if it already exists
+      const filteredQuestions = prevQuestions.filter(q => q !== newQuestion);
+      
+      // Add the new question at the beginning
+      const updatedQuestions = [newQuestion, ...filteredQuestions];
+      
+      // Limit to MAX_CACHED_QUESTIONS
+      const limitedQuestions = updatedQuestions.slice(0, MAX_CACHED_QUESTIONS);
+      
+      // Save to localStorage
+      localStorage.setItem(CACHE_KEY, JSON.stringify(limitedQuestions));
+      
+      return limitedQuestions;
+    });
   };
 
-  const handleGetAllFromCache = async () => {
-    clearError();
-    await getAllFromCache();
-  };
-
+  // Function to send message to API
   const sendMessage = async (customPrompt?: string) => {
+    const prompt = customPrompt || questionValue;
+    if (!prompt.trim()) {
+      setErrorMessage("Please enter a question.");
+      return;
+    }
+
     try {
       setIsLoadingMain(true);
-      const messageContent = customPrompt || questionValue;
-      if (!customPrompt) reset({ question: "" });
+      setErrorMessage(null);
 
-      const res = await fetch("/api/quiz", {
+      const response = await fetch("/api/quiz-listening", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-chat-model": selectedModel,
         },
-        body: JSON.stringify({
-          messages: messageContent,
-          model: selectedModel,
-        }),
+        body: JSON.stringify({ messages: prompt, model: selectedModel }),
       });
-      if (res.status !== 200) {
-        throw new Error("Failed to fetch data");
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to fetch quiz data");
       }
 
-      // Update cached questions list with the new message
-      updateCachedQuestions(messageContent);
+      const data = await response.json();
+      
+      // Update state with new response
+      setListeningData((prevData) => ({
+        ...prevData,
+        [prompt]: [...(prevData[prompt] || []), data],
+      }));
+
+      // Update cached questions
+      updateCachedQuestions(prompt);
+      updateCountCacheQuestions(prompt);
+
     } catch (error) {
       console.error("Error sending message:", error);
-      if (error instanceof Error) {
-        setFormError("question", {
-          type: "server",
-          message: error.message,
-        });
-      }
+      setErrorMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setIsLoadingMain(false);
     }
@@ -189,12 +208,15 @@ const AskQuestion = () => {
 
   return (
     <>
-      <div className="pt-4">
+      <div className="bg-white rounded-lg shadow p-6 mb-4">
+        <h2 className="text-xl font-semibold mb-4">Listening Quiz</h2>
+        
         {errorMessage && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             <strong className="font-bold">Error:</strong> {errorMessage}
           </div>
         )}
+        
         {/* Model Selection */}
         <div className="mb-4 bg-white rounded-lg p-4 shadow-sm">
           <ModelSelector
@@ -202,7 +224,7 @@ const AskQuestion = () => {
             defaultModel={DEFAULT_CHAT_MODEL}
             onChange={setSelectedModel}
             showFullList={false}
-            pageName="quiz"
+            pageName="quiz-listening"
           />
         </div>
 
@@ -245,16 +267,15 @@ const AskQuestion = () => {
         >
           <div className="flex flex-col gap-2">
             <input
-              readOnly
               className="border p-2 w-full"
-              placeholder="Ask something..."
+              placeholder="Enter a listening topic (e.g., 'Daily Conversations', 'Business English', 'Travel Scenarios')"
               disabled={isLoading}
-              {...register("question", { required: "Please enter a question" })}
+              {...register("question", { required: "Please enter a topic" })}
             />
             {countCacheQuestions > 0 && (
               <div className="flex flex-col w-full my-2">
                 <label className="text-sm">
-                  Max index: {countCacheQuestions}
+                  Available variations: {countCacheQuestions}
                 </label>
                 <select
                   className="border p-2 bg-white"
@@ -263,47 +284,43 @@ const AskQuestion = () => {
                     setSelectedCacheIndex(Number(e.target.value))
                   }
                   disabled={isLoading || countCacheQuestions === 0}
-                  title="Select which cache entry to use"
+                  title="Select which variation to use"
                 >
                   {Array.from({ length: countCacheQuestions }, (_, i) => (
                     <option key={i} value={i}>
-                      {i + 1}
+                      Variation {i + 1}
                     </option>
                   ))}
                 </select>
               </div>
             )}
           </div>
-          {errors.question && (
-            <div className="text-red-500 text-sm mb-2">
-              {errors.question?.message}
-            </div>
-          )}
+          
           <div className="flex space-x-2">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-500 text-white"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
               disabled={isLoading}
             >
-              {isLoading ? "Sending..." : "Generate Quiz"}
+              {isLoading ? "Generating..." : "Generate Listening Quiz"}
             </button>
             <button
               type="button"
-              onClick={() => handleGetAllFromCache()}
-              className="px-4 py-2 bg-blue-500 text-white"
+              onClick={handleGetFromCache}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
               disabled={isLoading}
             >
-              {isLoading ? "Sending..." : "Get from all cache"}
+              {isLoading ? "Loading..." : "Get from cache"}
             </button>
           </div>
         </form>
       </div>
-      {quizData && <Quiz />}
+      
+      {quizData && <QuizListening />}
     </>
   );
 };
 
-// Add display name for the component
-AskQuestion.displayName = "AskQuestion";
+AskListeningQuestion.displayName = "AskListeningQuestion";
 
-export default AskQuestion;
+export default AskListeningQuestion;

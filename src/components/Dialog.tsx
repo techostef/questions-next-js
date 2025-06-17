@@ -56,7 +56,7 @@ export default function Dialog({
     >
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold">{title}</h2>
           {showCloseButton && (
             <button
@@ -86,7 +86,7 @@ export default function Dialog({
         <div className="p-6 overflow-y-auto flex-grow">{children}</div>
 
         {/* Footer */}
-        {footer && <div className="p-6 border-t">{footer}</div>}
+        {footer && <div className="p-6 border-t border-gray-200">{footer}</div>}
       </div>
     </dialog>
   );

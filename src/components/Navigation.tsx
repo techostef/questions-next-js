@@ -16,10 +16,10 @@ export default function Navigation() {
         </li>
         <li className="mr-6">
           <button
-            onClick={() => router.push("/record")}
+            onClick={() => router.push("/quiz-listening")}
             className="text-blue-600 hover:text-blue-800 font-medium"
           >
-            Record
+            Listening
           </button>
         </li>
         <li className="mr-6">

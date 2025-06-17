@@ -61,6 +61,17 @@ export const splitTextIntoChunks = (
   return finalResult;
 };
 
+// ugly json
+export const uglyJson = (data: string) => {
+  return data.replace(/\n/g, "").replace(/\s+/g, " ");
+};
+
+export const cleanJson = (data: string) => {
+  data = data.replaceAll("\", }", "\"}");
+  data = data.replaceAll("\",}", "\"}");
+  return JSON.parse(data);
+};
+
 export const cleanUpResult = (data: APIResponse) => {
   try {
     // Handle object with content property
@@ -73,7 +84,7 @@ export const cleanUpResult = (data: APIResponse) => {
           const jsonContent = data.content.split("```json")[1].split("```")[0];
           return JSON.parse(jsonContent);
         } else {
-          return JSON.parse(data.content);
+          return cleanJson(uglyJson(data.content));
         }
       }
       return null;
@@ -95,8 +106,6 @@ export function findMistakes(original: string, test: string) {
   original = original.replaceAll("-", " ");
   original = original.replaceAll("—", " ");
   original = original.replaceAll("’", "'");
-  console.log("original", original);
-  console.log("test", test);
   // Helper function to clean and split text into words
   const clean = (str: string) =>
     str
