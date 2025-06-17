@@ -1,7 +1,7 @@
 "use client";
 
 import { cleanUpResult } from "@/lib/string";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQuizCache } from "@/hooks/useQuizCache";
 import ModelSelector from "@/components/ModelSelector";
@@ -16,9 +16,6 @@ export interface AskQuestionMethods {
   sendMessage: (customPrompt?: string) => Promise<void>;
   loadDifferentQuiz: () => Promise<void>;
 }
-
-const CACHE_KEY = "english_quiz_cached_questions";
-const MAX_CACHED_QUESTIONS = 100; // Maximum number of questions to store
 
 const AskQuestion = () => {
   const [isLoadingMain, setIsLoadingMain] = useState(false);
@@ -109,42 +106,29 @@ const AskQuestion = () => {
     }
   }, [data, questionValue, setAllQuizData]);
 
-  const updateCountCacheQuestions = async (customQuestion?: string) => {
+  const updateCountCacheQuestions = useCallback((customQuestion?: string) => {
     setCountCacheQuestions(
       data?.[customQuestion || questionValue]?.length || 0
     );
     setSelectedCacheIndex(0);
-  };
+  }, [data, questionValue]);
 
   // Function to select a cached question
-  const selectCachedQuestion = (question: string) => {
+  const selectCachedQuestion = useCallback((question: string) => {
     setValue("question", question);
     setShowCachedQuestions(false);
 
-    // Move the selected question to the top of the list (most recently used)
-    updateCachedQuestions(question);
     updateCountCacheQuestions(question);
-  };
-
-  // Update the cached questions list with MRU sorting
-  const updateCachedQuestions = (newQuestion: string) => {
-    // Create a new array without the selected question (if it exists)
-    const filteredQuestions = cachedQuestions.filter((q) => q !== newQuestion);
-
-    // Add the question to the beginning (most recently used)
-    const updatedQuestions = [newQuestion, ...filteredQuestions].slice(
-      0,
-      MAX_CACHED_QUESTIONS
-    );
-
-    // Update state and localStorage
-    setCachedQuestions(updatedQuestions);
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(updatedQuestions));
-    } catch (error) {
-      console.error("Error saving cached questions:", error);
+    console.log("selectedCacheIndex", selectedCacheIndex)
+    if (data[question]?.[selectedCacheIndex]) {
+      const cleanedResult = cleanUpResult(
+        data[question][selectedCacheIndex]
+      );
+      setQuizData(cleanedResult);
+    } else {
+      setQuizData(null);
     }
-  };
+  }, [data, selectedCacheIndex, setValue, updateCountCacheQuestions, setQuizData]);
 
   const handleGetAllFromCache = async () => {
     clearError();
@@ -171,9 +155,6 @@ const AskQuestion = () => {
       if (res.status !== 200) {
         throw new Error("Failed to fetch data");
       }
-
-      // Update cached questions list with the new message
-      updateCachedQuestions(messageContent);
     } catch (error) {
       console.error("Error sending message:", error);
       if (error instanceof Error) {

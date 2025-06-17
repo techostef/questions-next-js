@@ -14,9 +14,6 @@ export interface AskListeningQuestionMethods {
   loadDifferentQuiz: () => Promise<void>;
 }
 
-const CACHE_KEY = "english_listening_quiz_cached_questions";
-const MAX_CACHED_QUESTIONS = 100; // Maximum number of questions to store
-
 const AskListeningQuestion = () => {
   const [isLoadingMain, setIsLoadingMain] = useState(false);
   const [cachedQuestions, setCachedQuestions] = useState<string[]>([]);
@@ -62,16 +59,6 @@ const AskListeningQuestion = () => {
 
   useEffect(() => {
     loadCategories();
-    // Load cached questions from localStorage
-    const savedQuestions = localStorage.getItem(CACHE_KEY);
-    if (savedQuestions) {
-      try {
-        setCachedQuestions(JSON.parse(savedQuestions));
-      } catch (error) {
-        console.error("Error parsing saved questions:", error);
-        localStorage.removeItem(CACHE_KEY);
-      }
-    }
   }, []);
 
   useEffect(() => {
@@ -139,28 +126,15 @@ const AskListeningQuestion = () => {
     setValue("question", question);
     setShowCachedQuestions(false);
 
-    // Move the selected question to the top of the list (most recently used)
-    updateCachedQuestions(question);
     updateCountCacheQuestions(question);
-  };
-
-  // Update the cached questions list with MRU sorting
-  const updateCachedQuestions = (newQuestion: string) => {
-    setCachedQuestions((prevQuestions) => {
-      // Remove the question if it already exists
-      const filteredQuestions = prevQuestions.filter(q => q !== newQuestion);
-      
-      // Add the new question at the beginning
-      const updatedQuestions = [newQuestion, ...filteredQuestions];
-      
-      // Limit to MAX_CACHED_QUESTIONS
-      const limitedQuestions = updatedQuestions.slice(0, MAX_CACHED_QUESTIONS);
-      
-      // Save to localStorage
-      localStorage.setItem(CACHE_KEY, JSON.stringify(limitedQuestions));
-      
-      return limitedQuestions;
-    });
+    if (listeningData?.[question]?.[selectedCacheIndex]) {
+      const cleanedResult = cleanUpResult(
+        listeningData[question][selectedCacheIndex]
+      );
+      setQuizData(cleanedResult);
+    } else {
+      setQuizData(null);
+    }
   };
 
   // Function to send message to API
@@ -197,10 +171,7 @@ const AskListeningQuestion = () => {
         [prompt]: [...(prevData[prompt] || []), data],
       }));
 
-      // Update cached questions
-      updateCachedQuestions(prompt);
       updateCountCacheQuestions(prompt);
-
     } catch (error) {
       console.error("Error sending message:", error);
       setErrorMessage(error instanceof Error ? error.message : String(error));
