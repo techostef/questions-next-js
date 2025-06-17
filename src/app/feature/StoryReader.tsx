@@ -26,15 +26,12 @@ export const StoryReader: React.FC<StoryReaderProps> = ({
     stopRecording,
   } = useBasicRecorder({
     onBlobReceived: (blob: Blob) => {
-      console.log('Recording complete, processing audio...');
       processAudioRecording(blob);
     },
   });
   
   const processAudioRecording = useCallback(async (blob: Blob) => {
     if (!blob) return;
-    
-    console.log('Processing audio recording:', blob.size, 'bytes');
     
     const formData = new FormData();
     formData.append("audio", blob, "recording.webm");
@@ -66,7 +63,6 @@ export const StoryReader: React.FC<StoryReaderProps> = ({
 
   // Handle start reading
   const handleStartReading = useCallback(() => {
-    console.log('Starting reading session');
     // Start recording
     startRecording();
     onRecordingStateChange?.(true);
@@ -74,7 +70,6 @@ export const StoryReader: React.FC<StoryReaderProps> = ({
 
   // Handle stop reading
   const handleStopReading = useCallback(() => {
-    console.log('Stopping reading session');
     stopRecording();
     onRecordingStateChange?.(false);
   }, [stopRecording, onRecordingStateChange]);

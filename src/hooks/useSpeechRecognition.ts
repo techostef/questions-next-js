@@ -149,7 +149,6 @@ export function useSpeechRecognition(
 
       silenceTimerRef.current = setTimeout(() => {
         if (silenceTimeout !== 0 && recognitionRef.current && Date.now() - lastSpeechTimeRef.current >= silenceTimeout) {
-          console.log(`Auto-stopping after ${silenceTimeout/1000} seconds of silence`);
           recognitionRef.current.stop();
           // Don't set isListening here, we'll update it in onend handler
         }
@@ -158,13 +157,10 @@ export function useSpeechRecognition(
 
     // This event fires when recognition stops for any reason
     recognitionRef.current.onend = () => {
-      console.log('Speech recognition ended');
-      
       // Check if we're on Android and the stopping was unexpected
       const isAndroid = /android/i.test(navigator.userAgent);
       
       if (isAndroid && isListening) {
-        console.log('Android detected, auto-restarting speech recognition');
         // Small delay to allow the previous session to fully terminate
         setTimeout(() => {
           try {
@@ -215,12 +211,6 @@ export function useSpeechRecognition(
     if (typeof window === 'undefined') return;
 
     try {
-      // Check if we're in Firefox (which doesn't support SpeechRecognition well)
-      const isFirefox = navigator.userAgent.indexOf('Firefox') !== -1;
-      if (isFirefox) {
-        console.log('Firefox detected. Speech recognition may not work properly.');
-      }
-
       const SpeechRecognitionAPI =
         window.SpeechRecognition || (window as any).webkitSpeechRecognition;
         
@@ -289,7 +279,6 @@ export function useSpeechRecognition(
     try {
       // On Android, we may need to set shorter recognition segments
       if (isAndroid) {
-        console.log('Starting speech recognition on Android');
         // Android often has shorter timeouts for speech recognition
         recognitionRef.current.maxAlternatives = 1; // Reduce processing load
       }

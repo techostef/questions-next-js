@@ -77,15 +77,6 @@ export default function ChatPage() {
 
     // Check for browser support
     try {
-      // Check if we're in Firefox (which doesn't support SpeechRecognition well)
-      const isFirefox = navigator.userAgent.indexOf("Firefox") !== -1;
-
-      // Firefox detection - show notice in console but don't try to initialize
-      if (isFirefox) {
-        console.log("Firefox detected. Speech recognition may not work properly.");
-        // We'll still attempt to initialize but warn the user
-      }
-
       const SpeechRecognition =
         window.SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -125,7 +116,6 @@ export default function ChatPage() {
 
         silenceTimerRef.current = setTimeout(() => {
           if (recognitionRef.current && Date.now() - lastSpeechTime >= 2000) {
-            console.log("Auto-stopping after 2 seconds of silence");
             recognitionRef.current.stop();
             // Don't set isListening here, we'll update it in onend handler
           }
@@ -134,7 +124,6 @@ export default function ChatPage() {
 
       // This event fires when recognition stops for any reason
       recognitionRef.current.onend = () => {
-        console.log("Speech recognition ended");
         setIsListening(false);
 
         // Clear the silence timer if it exists

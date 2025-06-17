@@ -90,7 +90,6 @@ export function useAudioRecorder(
   options: AudioRecorderOptions = {}
 ): UseAudioRecorderReturn {
   // Add debugging to track component lifecycle
-  console.log('useAudioRecorder hook initialized or re-rendered');
   const {
     maxDuration = 60000, // Default 60 seconds
     minDuration = 1000,  // Default 1 second minimum
@@ -119,13 +118,12 @@ export function useAudioRecorder(
   // Handle data available event from media recorder
   const handleDataAvailable = useCallback((event: BlobEvent) => {
     if (event.data && event.data.size > 0) {
-      console.log(`Audio data available: ${event.data.size} bytes`);
       if (!audioChunksRef.current) {
         audioChunksRef.current = [];
       }
       audioChunksRef.current.push(event.data);
     } else {
-      console.log(`Empty audio data received: ${event.data?.size || 0} bytes`);
+      console.error(`Empty audio data received: ${event.data?.size || 0} bytes`);
     }
   }, []);
 
@@ -147,7 +145,6 @@ export function useAudioRecorder(
     // Only do this after we've processed the recording data
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
-        console.log(`Stopping track: ${track.label} (${track.kind})`);
         track.stop();
       });
       streamRef.current = null;
@@ -159,8 +156,6 @@ export function useAudioRecorder(
 
   // Clear recording without processing
   const cancelRecording = useCallback(() => {
-    console.log('Canceling recording');
-    
     // Clear audio chunks and reset state first
     audioChunksRef.current = [];
     setIsRecording(false);
@@ -169,7 +164,6 @@ export function useAudioRecorder(
     // Then stop the media recorder if it's active
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       try {
-        console.log('Stopping media recorder during cancellation');
         mediaRecorderRef.current.stop();
       } catch (err) {
         console.error('Error stopping media recorder:', err);
@@ -201,8 +195,6 @@ export function useAudioRecorder(
 
   // Process recorded audio into a single blob
   const handleRecordingStop = useCallback(() => {
-    console.log(`MediaRecorder stopped, processing chunks: ${audioChunksRef.current?.length || 0}`);
-    
     // Clear the minimum recording time timeout
     if (minRecordTimeoutRef.current) {
       clearTimeout(minRecordTimeoutRef.current);
@@ -214,7 +206,6 @@ export function useAudioRecorder(
     
     // Check if we have any audio chunks
     if (!audioChunksRef.current || audioChunksRef.current.length === 0) {
-      console.log('No audio chunks recorded');
       setError('No audio was recorded. Please try again and ensure your microphone is working.');
       setIsProcessing(false);
       
@@ -224,16 +215,8 @@ export function useAudioRecorder(
     }
     
     try {
-      // Log the chunks we have
-      console.log(`Processing ${audioChunksRef.current.length} audio chunks:`, 
-        audioChunksRef.current.map(chunk => chunk.size));
-      
-      // Create a single blob from all the chunks
-      // Use the same MIME type that was detected during recording
       const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm';
       const blob = new Blob(audioChunksRef.current, { type: mimeType });
-      
-      console.log(`Created audio blob: ${blob.size} bytes, type: ${blob.type}`);
       
       if (blob.size < 100) {
         // If the blob is too small, it probably didn't record properly
@@ -267,10 +250,7 @@ export function useAudioRecorder(
 
   // Stop recording
   const stopRecording = useCallback(() => {
-    console.log('Stopping recording, recorder state:', mediaRecorderRef.current?.state, 'isRecording:', isRecording);
-    
     if (!mediaRecorderRef.current || !isRecording) {
-      console.log('No active recorder or not recording, cannot stop');
       return;
     }
 
@@ -281,11 +261,9 @@ export function useAudioRecorder(
       if (minRecordTimeReachedRef.current) {
         // Make sure the recorder is in the recording state before stopping
         if (mediaRecorderRef.current.state === 'recording') {
-          console.log('Stopping media recorder');
           mediaRecorderRef.current.stop();
           // Don't cleanup resources here - handleRecordingStop will do it
         } else {
-          console.log('MediaRecorder not in recording state, cannot stop');
           setIsRecording(false);
           setIsProcessing(false);
           cleanupResources();
@@ -295,13 +273,11 @@ export function useAudioRecorder(
         const timeElapsed = Date.now() - recordingStartTimeRef.current;
         const timeRemaining = minDuration - timeElapsed;
         
-        console.log(`Recording too short (${timeElapsed}ms), waiting ${timeRemaining}ms more`);
         setError(`Recording too short. Please record for at least ${Math.ceil(minDuration / 1000)} seconds.`);
         
         // Wait until minimum duration is reached before stopping
         setTimeout(() => {
           if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-            console.log('Stopping recorder after minimum duration');
             try {
               mediaRecorderRef.current.stop();
               // Don't cleanup resources here - handleRecordingStop will do it
@@ -312,7 +288,6 @@ export function useAudioRecorder(
               cleanupResources();
             }
           } else {
-            console.log('Recorder no longer active after waiting for minimum duration');
             setIsRecording(false);
             setIsProcessing(false);
             cleanupResources();
@@ -331,7 +306,6 @@ export function useAudioRecorder(
   const startRecording = useCallback(async () => {
     // Skip if already recording
     if (isRecording || mediaRecorderRef.current) {
-      console.log('Already recording, cannot start again');
       return;
     }
 
@@ -345,8 +319,6 @@ export function useAudioRecorder(
       }
       audioChunksRef.current = [];
       setIsProcessing(true);
-      
-      console.log('Starting recording...');
       
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -362,9 +334,6 @@ export function useAudioRecorder(
       if (audioTracks.length === 0) {
         throw new Error('No audio tracks available in the media stream');
       }
-      
-      console.log(`Got ${audioTracks.length} audio tracks:`, 
-        audioTracks.map(track => `${track.label} (enabled: ${track.enabled})`));
       
       // Keep track of stream to stop it later
       streamRef.current = stream;
@@ -384,8 +353,6 @@ export function useAudioRecorder(
       } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
         supportedMimeType = 'audio/mp4';
       }
-      
-      console.log(`Using MIME type: ${supportedMimeType}`);
       
       // Create media recorder
       const recorder = new MediaRecorder(stream, {
@@ -414,13 +381,11 @@ export function useAudioRecorder(
       
       // Set minimum recording time timeout
       minRecordTimeoutRef.current = setTimeout(() => {
-        console.log('Minimum recording time reached');
         minRecordTimeReachedRef.current = true;
       }, minDuration);
       
       // Set maximum recording time timer
       maxRecordingTimerRef.current = setTimeout(() => {
-        console.log('Maximum recording time reached, stopping');
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           stopRecording();
         }
@@ -431,7 +396,6 @@ export function useAudioRecorder(
       
       // Start the recorder with timeslice to get data periodically
       recorder.start(chunkSize);
-      console.log(`MediaRecorder started with chunk size: ${chunkSize}ms`);
       
       // No longer processing (initializing)
       setIsProcessing(false);

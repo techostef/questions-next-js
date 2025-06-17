@@ -12,11 +12,9 @@ export async function POST(req: NextRequest) {
 
     // Parse the request body
     const body = await req.json();
-    console.log("Request body:", body);
     
     // Parse the users from environment variable
     const users = JSON.parse(usersJSON);
-    console.log("Available users:", users);
     
     // Find the matching user
     const findUser = users.find(

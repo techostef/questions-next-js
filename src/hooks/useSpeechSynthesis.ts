@@ -33,7 +33,6 @@ export function useSpeechSynthesis() {
 
     // Check if speech synthesis is supported
     if (!("speechSynthesis" in window)) {
-      console.log("Speech synthesis not supported in this browser");
       return; // Exit early if not supported
     }
 
@@ -101,7 +100,6 @@ export function useSpeechSynthesis() {
     
     // Check if speech synthesis is supported
     if (!("speechSynthesis" in window)) {
-      console.log("Speech synthesis not supported in this browser");
       return; // Exit early if not supported
     }
 

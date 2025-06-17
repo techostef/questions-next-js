@@ -35,8 +35,6 @@ export default function AudioRecorderExample({
   useEffect(() => {
     const processAudio = async () => {
       if (audioBlob && !isRecording && !isProcessing) {
-        console.log('Processing audio blob:', audioBlob.size, 'bytes');
-        
         try {
           // Create form data for sending to API
           const formData = new FormData();
@@ -53,8 +51,6 @@ export default function AudioRecorderExample({
           }
           
           const data = await response.json();
-          console.log('Transcription received:', data);
-          
           // Update transcript state
           if (data.text) {
             setTranscript(data.text);
