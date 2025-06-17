@@ -98,6 +98,7 @@ const AskListeningQuestion = () => {
 
   const handleGetFromCache = async () => {
     try {
+      setIsLoadingMain(true);
       const res = await fetch("/api/quiz-listening", {
         method: "GET",
         headers: {
@@ -111,6 +112,8 @@ const AskListeningQuestion = () => {
       setListeningData(data);
     } catch (error) {
       console.error("Error fetching data:", error);
+    } finally {
+      setIsLoadingMain(false);
     }
   };
 
