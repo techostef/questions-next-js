@@ -10,6 +10,7 @@ import Quiz from "./Quiz";
 import { Questions, useQuizStore } from "@/store/quizStore";
 import { v4 as uuidv4 } from "uuid";
 import Button from "./Button";
+import Input from "./Input";
 
 // Questions interface is now imported from the quizStore
 
@@ -227,9 +228,8 @@ const AskQuestion = () => {
           className="space-y-2"
         >
           <div className="flex flex-col gap-2">
-            <input
+            <Input
               readOnly
-              className="border p-2 w-full"
               placeholder="Ask something..."
               disabled={isLoading}
               {...register("question", { required: "Please enter a question" })}

@@ -20,6 +20,7 @@ import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 import Button from "@/components/Button";
+import Input from "@/components/Input";
 
 interface Message {
   role: "user" | "assistant";
@@ -393,11 +394,9 @@ export default function ChatPage() {
               >
                 <Mic isListening={isListening} />
               </button>
-              <input
-                type="text"
+              <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                className="w-full flex-grow px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Type your message..."
                 disabled={isLoading}
               />

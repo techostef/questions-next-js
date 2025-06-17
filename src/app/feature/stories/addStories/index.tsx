@@ -2,6 +2,7 @@ import { Story } from "@/types/story";
 import Dialog from "@/components/Dialog";
 import { Dispatch, SetStateAction, useState } from "react";
 import Button from "@/components/Button";
+import Input from "@/components/Input";
 
 interface AddStoriesProps {
   isAddStoryDialogOpen: boolean;
@@ -156,10 +157,8 @@ const AddStories = (props: AddStoriesProps) => {
             >
               Title
             </label>
-            <input
-              type="text"
+            <Input
               id="title"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={newStory.title}
               onChange={(e) =>
                 setNewStory({ ...newStory, title: e.target.value })

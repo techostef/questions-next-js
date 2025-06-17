@@ -1,5 +1,6 @@
 import Button from "@/components/Button";
 import Dialog from "@/components/Dialog";
+import Input from "@/components/Input";
 import { Story } from "@/types/story";
 import { useEffect, useState } from "react";
 
@@ -93,12 +94,10 @@ export default function ListStories({
       >
         <div className="mb-4 flex flex-col md:flex-row gap-2 md:items-center">
           <div className="flex-grow">
-            <input
-              type="text"
+            <Input
               value={searchTerm}
               onChange={handleSearchChange}
               placeholder="Search stories..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div className="flex items-center gap-2">

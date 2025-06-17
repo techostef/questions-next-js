@@ -12,6 +12,7 @@ import {
 } from "@/store/quizListeningStore";
 import { v4 as uuidv4 } from "uuid";
 import Button from "./Button";
+import Input from "./Input";
 
 export interface AskListeningQuestionMethods {
   sendMessage: (customPrompt?: string) => Promise<void>;
@@ -242,8 +243,7 @@ const AskListeningQuestion = () => {
         className="space-y-2"
       >
         <div className="flex flex-col gap-2">
-          <input
-            className="border p-2 w-full"
+          <Input
             placeholder="Enter a listening topic (e.g., 'Daily Conversations', 'Business English', 'Travel Scenarios')"
             disabled={isLoading}
             {...register("question", { required: "Please enter a topic" })}
