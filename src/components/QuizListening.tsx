@@ -147,7 +147,7 @@ export default function QuizListening() {
         }
       >
         <div className="mb-2">
-          <div className="flex flex-col items-center mb-4">
+          <div className="flex flex-col items-center mb-1">
             {/* Toggle between current quiz and all quizzes */}
             <div className="mb-3 flex gap-4">
               <label className="inline-flex items-center cursor-pointer">
@@ -178,7 +178,7 @@ export default function QuizListening() {
 
           <div
             className={`space-y-8 overflow-y-auto`}
-            style={{ height: "calc(100vh - 350px)" }}
+            style={{ height: "calc(100vh - 300px)" }}
           >
             {activeQuizData.questions.map((question, qIndex) => (
               <QuizListeningQuestion
