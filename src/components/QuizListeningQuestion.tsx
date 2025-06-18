@@ -50,9 +50,9 @@ export default function QuizListeningQuestion({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-4 border-gray-300">
+    <div className="max-h-[calc(100vh-290px)] overflow-y-auto bg-white rounded-lg shadow-sm border p-4 border-gray-300">
       <div className="mb-4">
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center gap-3 mb-2 text-sm">
           <h3 className="font-medium text-lg">Question {index + 1}</h3>
           <button
             onClick={onPlayAudio}
@@ -71,10 +71,10 @@ export default function QuizListeningQuestion({
         {Object.entries(options).map(([key, value]) => (
           <div
             key={key}
-            className={`border border-gray-300 rounded-lg p-3 cursor-pointer transition-colors ${getOptionClass(key)}`}
+            className={`border border-gray-300 rounded-lg p-2 px-3 cursor-pointer transition-colors ${getOptionClass(key)}`}
             onClick={() => !showResults && onAnswerSelect(index, key)}
           >
-            <div className="flex items-start">
+            <div className="flex items-start text-sm">
               <span className="font-medium mr-2">{key.toUpperCase()}</span>
               <span>{value}</span>
             </div>
@@ -87,12 +87,12 @@ export default function QuizListeningQuestion({
           <div className="font-medium text-green-700">
             Correct Answer: {answer.toUpperCase()}
           </div>
-          <div className="mt-2">
-            <span className="font-medium">Explanation:</span> {reason}
+          <div className="mt-2 text-sm">
+            <span className="font-medium text-sm">Explanation:</span> {reason}
           </div>
           
           <div className="mt-2 text-sm text-gray-500 border-t pt-2">
-            <span className="font-medium">Audio Text:</span> {audioPrompt}
+            <span className="font-medium text-sm">Audio Text:</span> {audioPrompt}
           </div>
         </div>
       )}

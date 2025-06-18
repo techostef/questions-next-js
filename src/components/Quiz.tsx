@@ -11,6 +11,7 @@ export default function Quiz() {
   const [showResults, setShowResults] = useState(false);
   const [useAllQuizzes, setUseAllQuizzes] = useState(false);
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // Combine all questions when useAllQuizzes is true
   const activeQuizData = useMemo(() => {
@@ -44,6 +45,7 @@ export default function Quiz() {
   const resetQuiz = () => {
     setUserAnswers({});
     setShowResults(false);
+    setCurrentQuestionIndex(0);
   };
 
   const getScore = () => {
@@ -63,7 +65,34 @@ export default function Quiz() {
       <Dialog
         isOpen={isQuizDialogOpen}
         onClose={() => setIsQuizDialogOpen(false)}
-        title="Quiz"
+        title={
+          <div className="flex gap-4">
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useAllQuizzes}
+                onChange={() => {
+                  setUseAllQuizzes(!useAllQuizzes);
+                  // Reset answers when switching between modes
+                  setUserAnswers({});
+                  setShowResults(false);
+                  setCurrentQuestionIndex(0);
+                }}
+                className="sr-only peer"
+              />
+              <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <span className="ms-3 text-sm font-medium">All Quizzes</span>
+            </label>
+            <div className="flex">
+              <span className="mr-4 font-bold">
+                Score:{" "}
+                {showResults
+                  ? `${getScore()}/${activeQuizData.questions.length}`
+                  : "-"}
+              </span>
+            </div>
+          </div>
+        }
         maxWidth="max-w-4xl"
         footer={
           <div className="flex gap-1 w-full">
@@ -93,53 +122,53 @@ export default function Quiz() {
           </div>
         }
       >
-        <div className="mb-2">
-          <div className="flex flex-col items-center mb-1">
-            {/* Toggle between current quiz and all quizzes */}
-            <div className="mb-3 flex gap-4">
-              <label className="inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={useAllQuizzes}
-                  onChange={() => {
-                    setUseAllQuizzes(!useAllQuizzes);
-                    // Reset answers when switching between modes
-                    setUserAnswers({});
-                    setShowResults(false);
-                  }}
-                  className="sr-only peer"
-                />
-                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                <span className="ms-3 text-sm font-medium">All Quizzes</span>
-              </label>
-              <div className="flex">
-                <span className="mr-4 font-bold">
-                  Score:{" "}
-                  {showResults
-                    ? `${getScore()}/${activeQuizData.questions.length}`
-                    : "-"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className={`space-y-8 overflow-y-auto`}
-            style={{ height: "calc(100vh - 300px)" }}
-          >
-            {activeQuizData.questions.map((question, qIndex) => (
+        <div className="relative h-full">
+          <div className="flex flex-col">
+            {/* Current question display */}
+            <div className="mb-4">
+              <p className="text-sm text-gray-500 mb-2">
+                Question {currentQuestionIndex + 1} of{" "}
+                {activeQuizData.questions.length}
+              </p>
               <QuizQuestion
-                key={qIndex}
-                index={qIndex}
-                question={question.question}
-                options={question.options}
-                answer={question.answer}
-                reason={question.reason}
-                userAnswer={userAnswers[qIndex]}
+                key={currentQuestionIndex}
+                index={currentQuestionIndex}
+                question={
+                  activeQuizData.questions[currentQuestionIndex].question
+                }
+                options={activeQuizData.questions[currentQuestionIndex].options}
+                answer={activeQuizData.questions[currentQuestionIndex].answer}
+                reason={activeQuizData.questions[currentQuestionIndex].reason}
+                userAnswer={userAnswers[currentQuestionIndex]}
                 showResults={showResults}
                 onAnswerSelect={handleAnswerSelect}
               />
-            ))}
+            </div>
+          </div>
+          {/* Navigation buttons */}
+          <div className="flex justify-between mt-4 absolute bottom-0 w-full">
+            <Button
+              onClick={() =>
+                setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))
+              }
+              variant="default"
+              disabled={currentQuestionIndex === 0}
+            >
+              Previous Question
+            </Button>
+            <Button
+              onClick={() =>
+                setCurrentQuestionIndex((prev) =>
+                  Math.min(activeQuizData.questions.length - 1, prev + 1)
+                )
+              }
+              variant="default"
+              disabled={
+                currentQuestionIndex === activeQuizData.questions.length - 1
+              }
+            >
+              Next Question
+            </Button>
           </div>
         </div>
       </Dialog>

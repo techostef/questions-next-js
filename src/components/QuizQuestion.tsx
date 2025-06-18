@@ -30,7 +30,7 @@ export default function QuizQuestion({
 }: QuestionProps) {
   return (
     <div 
-      className={`p-4 border rounded ${
+      className={`max-h-[calc(100vh-335px)] overflow-y-auto p-4 border rounded ${
         showResults 
           ? userAnswer === answer 
             ? 'bg-green-50 border-green-200' 
