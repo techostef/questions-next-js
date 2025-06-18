@@ -28,10 +28,9 @@ const AskQuestion = () => {
   const [selectedModel, setSelectedModel] =
     useState<string>(DEFAULT_CHAT_MODEL);
   // Using global state from Zustand store instead of local state
-  const { quizData, allQuizData, setQuizData, setAllQuizData } =
+  const { quizData, setQuizData, setAllQuizData } =
     useQuizStore();
 
-    console.log("check allQuizData", allQuizData);
 
   // Initialize the quiz cache hook
   const {
@@ -110,7 +109,6 @@ const AskQuestion = () => {
       for (const value of data[questionValue]) {
         newData.push(cleanUpResult(value));
       }
-      console.log("newData", newData);
       setAllQuizData(newData);
     }
   }, [data, questionValue, setAllQuizData]);
@@ -123,9 +121,7 @@ const AskQuestion = () => {
 
       updateCountCacheQuestions(question);
       if (data[question]?.[selectedCacheIndex]) {
-        console.log("data[question][selectedCacheIndex]", {...data[question]});
         const cleanedResult = cleanUpResult(data[question][selectedCacheIndex]);
-        console.log("cleanedResult", cleanedResult);
         setQuizData(cleanedResult);
       } else {
         setQuizData(null);
