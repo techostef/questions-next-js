@@ -5,7 +5,10 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
-import { useQuizListeningStore, ListeningQuizData } from "@/store/quizListeningStore";
+import {
+  useQuizListeningStore,
+  ListeningQuizData,
+} from "@/store/quizListeningStore";
 import { v4 as uuidv4 } from "uuid";
 import Button from "./Button";
 import Input from "./Input";
@@ -64,12 +67,15 @@ const AskListeningQuestion = () => {
     loadCategories();
   }, []);
 
-  const updateCountCacheQuestions = useCallback((customQuestion?: string) => {
-    setCountCacheQuestions(
-      listeningData?.[customQuestion || questionValue]?.length || 0
-    );
-    setSelectedCacheIndex(0);
-  }, [listeningData, questionValue, setSelectedCacheIndex]);
+  const updateCountCacheQuestions = useCallback(
+    (customQuestion?: string) => {
+      setCountCacheQuestions(
+        listeningData?.[customQuestion || questionValue]?.length || 0
+      );
+      setSelectedCacheIndex(0);
+    },
+    [listeningData, questionValue, setSelectedCacheIndex]
+  );
 
   useEffect(() => {
     if (listeningData && questionValue && listeningData[questionValue]) {
@@ -86,7 +92,14 @@ const AskListeningQuestion = () => {
       addQuizToCollection(quizId, cleanedResult);
       updateCountCacheQuestions(questionValue);
     }
-  }, [listeningData, questionValue, selectedCacheIndex, setQuizData, addQuizToCollection, updateCountCacheQuestions]);
+  }, [
+    listeningData,
+    questionValue,
+    selectedCacheIndex,
+    setQuizData,
+    addQuizToCollection,
+    updateCountCacheQuestions,
+  ]);
 
   const handleGetFromCache = async () => {
     try {
@@ -164,10 +177,13 @@ const AskListeningQuestion = () => {
       const data = await response.json();
 
       // Update state with new response
-      setListeningData((prevData) => ({
-        ...prevData,
-        [prompt]: [...(prevData[prompt] || []), data],
-      } as Record<string, Array<unknown>>));
+      setListeningData(
+        (prevData) =>
+          ({
+            ...prevData,
+            [prompt]: [...(prevData[prompt] || []), data],
+          } as Record<string, Array<unknown>>)
+      );
 
       updateCountCacheQuestions(prompt);
     } catch (error) {
@@ -213,19 +229,23 @@ const AskListeningQuestion = () => {
         <div className="mb-3 border rounded p-2 bg-gray-50">
           <h3 className="text-sm font-medium mb-1">Previous Questions:</h3>
           <div className="max-h-40 overflow-y-auto">
-            {cachedQuestions.map((question, index) => (
-              <button
-                key={index}
-                onClick={() => selectCachedQuestion(question)}
-                className="block w-full text-left p-1 text-sm hover:bg-blue-50 rounded truncate"
-                title={question}
-              >
-                {index + 1}.{" "}
-                {question.length > 50
+            {cachedQuestions.map((question, index) => {
+              const questionText =
+                question.length > 50
                   ? question.substring(0, 50) + "..."
-                  : question}
-              </button>
-            ))}
+                  : question;
+              const lengthData = listeningData?.[question]?.length || 0;
+              return (
+                <button
+                  key={index}
+                  onClick={() => selectCachedQuestion(question)}
+                  className="block w-full text-left p-1 text-sm hover:bg-blue-50 rounded truncate"
+                  title={question}
+                >
+                  {index + 1}. {`${questionText} (${lengthData})`}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -251,10 +271,13 @@ const AskListeningQuestion = () => {
                 onChange={(e) => setSelectedCacheIndex(Number(e.target.value))}
                 disabled={isLoading || countCacheQuestions === 0}
                 title="Select which variation to use"
-                options={Array.from({ length: countCacheQuestions }, (_, i) => ({
-                  value: i,
-                  label: `Variation ${i + 1}`
-                }))}
+                options={Array.from(
+                  { length: countCacheQuestions },
+                  (_, i) => ({
+                    value: i,
+                    label: `Variation ${i + 1}`,
+                  })
+                )}
               />
             </div>
           )}
@@ -262,7 +285,7 @@ const AskListeningQuestion = () => {
 
         <div className="flex space-x-2">
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Generating..." : "Generate Listening Quiz"}
+            {isLoading ? "Loading..." : "Generate Listening Quiz"}
           </Button>
           <Button
             type="button"

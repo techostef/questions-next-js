@@ -77,12 +77,15 @@ const AskQuestion = () => {
     loadCategories();
   }, []);
 
-  const updateCountCacheQuestions = useCallback((customQuestion?: string) => {
-    setCountCacheQuestions(
-      data?.[customQuestion || questionValue]?.length || 0
-    );
-    setSelectedCacheIndex(0);
-  }, [data, questionValue]);
+  const updateCountCacheQuestions = useCallback(
+    (customQuestion?: string) => {
+      setCountCacheQuestions(
+        data?.[customQuestion || questionValue]?.length || 0
+      );
+      setSelectedCacheIndex(0);
+    },
+    [data, questionValue]
+  );
 
   useEffect(() => {
     if (data && questionValue && data[questionValue]) {
@@ -119,20 +122,21 @@ const AskQuestion = () => {
   }, [data, questionValue, setAllQuizData]);
 
   // Function to select a cached question
-  const selectCachedQuestion = useCallback((question: string) => {
-    setValue("question", question);
-    setShowCachedQuestions(false);
+  const selectCachedQuestion = useCallback(
+    (question: string) => {
+      setValue("question", question);
+      setShowCachedQuestions(false);
 
-    updateCountCacheQuestions(question);
-    if (data[question]?.[selectedCacheIndex]) {
-      const cleanedResult = cleanUpResult(
-        data[question][selectedCacheIndex]
-      );
-      setQuizData(cleanedResult);
-    } else {
-      setQuizData(null);
-    }
-  }, [data, selectedCacheIndex, setValue, updateCountCacheQuestions, setQuizData]);
+      updateCountCacheQuestions(question);
+      if (data[question]?.[selectedCacheIndex]) {
+        const cleanedResult = cleanUpResult(data[question][selectedCacheIndex]);
+        setQuizData(cleanedResult);
+      } else {
+        setQuizData(null);
+      }
+    },
+    [data, selectedCacheIndex, setValue, updateCountCacheQuestions, setQuizData]
+  );
 
   const handleGetAllFromCache = async () => {
     clearError();
@@ -207,19 +211,23 @@ const AskQuestion = () => {
           <div className="mb-3 border rounded p-2 bg-gray-50">
             <h3 className="text-sm font-medium mb-1">Previous Questions:</h3>
             <div className="max-h-40 overflow-y-auto">
-              {cachedQuestions.map((question, index) => (
-                <button
-                  key={index}
-                  onClick={() => selectCachedQuestion(question)}
-                  className="block w-full text-left p-1 text-sm hover:bg-blue-50 rounded truncate"
-                  title={question}
-                >
-                  {index + 1}.{" "}
-                  {question.length > 50
-                    ? question.substring(0, 50) + "..."
-                    : question}
-                </button>
-              ))}
+              {cachedQuestions.map((question, index) => {
+                const questionText = question.length > 50
+                ? question.substring(0, 50) + "..."
+                : question;
+                const lengthData = data?.[question]?.length || 0;
+                return (
+                  <button
+                    key={index}
+                    onClick={() => selectCachedQuestion(question)}
+                    className="block w-full text-left p-1 text-sm hover:bg-blue-50 rounded truncate"
+                    title={question}
+                  >
+                    {index + 1}.{" "}
+                    {`${questionText} (${lengthData})`}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -243,13 +251,18 @@ const AskQuestion = () => {
                 </label>
                 <Select
                   value={selectedCacheIndex}
-                  onChange={(e) => setSelectedCacheIndex(Number(e.target.value))}
+                  onChange={(e) =>
+                    setSelectedCacheIndex(Number(e.target.value))
+                  }
                   disabled={isLoading || countCacheQuestions === 0}
                   title="Select which cache entry to use"
-                  options={Array.from({ length: countCacheQuestions }, (_, i) => ({
-                    value: i,
-                    label: `${i + 1}`
-                  }))}
+                  options={Array.from(
+                    { length: countCacheQuestions },
+                    (_, i) => ({
+                      value: i,
+                      label: `${i + 1}`,
+                    })
+                  )}
                 />
               </div>
             )}
@@ -260,10 +273,7 @@ const AskQuestion = () => {
             </div>
           )}
           <div className="flex space-x-2">
-            <Button
-              type="submit"
-              disabled={isLoading}
-            >
+            <Button type="submit" disabled={isLoading}>
               {isLoading ? "Sending..." : "Generate Quiz"}
             </Button>
             <Button

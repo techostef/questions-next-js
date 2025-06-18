@@ -79,10 +79,7 @@ export default function Quiz() {
                 Check Answers
               </Button>
             ) : (
-              <Button
-                onClick={resetQuiz}
-                variant="primary"
-              >
+              <Button onClick={resetQuiz} variant="primary">
                 Try Again
               </Button>
             )}
@@ -97,11 +94,9 @@ export default function Quiz() {
         }
       >
         <div className="mb-2">
-          <div className="flex flex-col items-center mb-4">
-            <h2 className="text-xl">Questions</h2>
-
+          <div className="flex flex-col items-center mb-1">
             {/* Toggle between current quiz and all quizzes */}
-            <div className="mb-3">
+            <div className="mb-3 flex gap-4">
               <label className="inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -115,26 +110,22 @@ export default function Quiz() {
                   className="sr-only peer"
                 />
                 <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                <span className="ms-3 text-sm font-medium">
-                  {useAllQuizzes
-                    ? "Using All Quizzes"
-                    : "Using Current Quiz"}
-                </span>
+                <span className="ms-3 text-sm font-medium">All Quizzes</span>
               </label>
-            </div>
-
-            <div className="flex">
-              {showResults && (
+              <div className="flex">
                 <span className="mr-4 font-bold">
-                  Score: {getScore()}/{activeQuizData.questions.length}
+                  Score:{" "}
+                  {showResults
+                    ? `${getScore()}/${activeQuizData.questions.length}`
+                    : "-"}
                 </span>
-              )}
+              </div>
             </div>
           </div>
 
           <div
             className={`space-y-8 overflow-y-auto`}
-            style={{ height: "calc(100vh - 350px)" }}
+            style={{ height: "calc(100vh - 300px)" }}
           >
             {activeQuizData.questions.map((question, qIndex) => (
               <QuizQuestion

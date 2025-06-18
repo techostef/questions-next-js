@@ -7,13 +7,19 @@ import Button from "./Button";
 
 export default function QuizListening() {
   // Get quizData and allQuizData from global store
-  const { quizData, allQuizData, currentAudioIndex, setCurrentAudioIndex, setIsAudioPlaying } = useQuizListeningStore();
+  const {
+    quizData,
+    allQuizData,
+    currentAudioIndex,
+    setCurrentAudioIndex,
+    setIsAudioPlaying,
+  } = useQuizListeningStore();
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [showResults, setShowResults] = useState(false);
   const [useAllQuizzes, setUseAllQuizzes] = useState(false);
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  
+
   // Initialize speech synthesis hook
   const { speak, stop, isSupported } = useSpeechSynthesis();
 
@@ -57,8 +63,6 @@ export default function QuizListening() {
     }, 0);
   };
 
-
-
   const handlePlayAudio = async (index: number, audioPrompt: string) => {
     try {
       // If already playing this audio, pause it
@@ -68,17 +72,17 @@ export default function QuizListening() {
         setIsAudioPlaying(false);
         return;
       }
-      
+
       // Stop any currently playing audio
       if (isPlaying) {
         stop();
         setIsPlaying(false);
         setIsAudioPlaying(false);
       }
-      
+
       // Update the current audio index
       setCurrentAudioIndex(index);
-      
+
       // Use speech synthesis to speak the text
       if (isSupported) {
         speak(audioPrompt);
@@ -94,10 +98,10 @@ export default function QuizListening() {
           }
         }, 100);
       } else {
-        console.error('Speech synthesis is not supported in this browser');
+        console.error("Speech synthesis is not supported in this browser");
       }
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error("Error playing audio:", error);
     }
   };
 
@@ -128,10 +132,7 @@ export default function QuizListening() {
                 Check Answers
               </Button>
             ) : (
-              <Button
-                onClick={resetQuiz}
-                variant="primary"
-              >
+              <Button onClick={resetQuiz} variant="primary">
                 Try Again
               </Button>
             )}
@@ -148,7 +149,7 @@ export default function QuizListening() {
         <div className="mb-2">
           <div className="flex flex-col items-center mb-4">
             {/* Toggle between current quiz and all quizzes */}
-            <div className="mb-3">
+            <div className="mb-3 flex gap-4">
               <label className="inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -162,20 +163,16 @@ export default function QuizListening() {
                   className="sr-only peer"
                 />
                 <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                <span className="ms-3 text-sm font-medium">
-                  {useAllQuizzes
-                    ? "Using All Quizzes"
-                    : "Using Current Quiz"}
-                </span>
+                <span className="ms-3 text-sm font-medium">All Quizzes</span>
               </label>
-            </div>
-
-            <div className="flex">
-              {showResults && (
+              <div className="flex">
                 <span className="mr-4 font-bold">
-                  Score: {getScore()}/{activeQuizData.questions.length}
+                  Score:{" "}
+                  {showResults
+                    ? `${getScore()}/${activeQuizData.questions.length}`
+                    : "-"}
                 </span>
-              )}
+              </div>
             </div>
           </div>
 
@@ -195,7 +192,9 @@ export default function QuizListening() {
                 userAnswer={userAnswers[qIndex]}
                 showResults={showResults}
                 onAnswerSelect={handleAnswerSelect}
-                onPlayAudio={() => handlePlayAudio(qIndex, question.audioPrompt)}
+                onPlayAudio={() =>
+                  handlePlayAudio(qIndex, question.audioPrompt)
+                }
                 isPlaying={currentAudioIndex === qIndex && isPlaying}
               />
             ))}
