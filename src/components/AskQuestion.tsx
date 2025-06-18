@@ -8,7 +8,6 @@ import ModelSelector from "@/components/ModelSelector";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 import Quiz from "./Quiz";
 import { Questions, useQuizStore } from "@/store/quizStore";
-import { v4 as uuidv4 } from "uuid";
 import Button from "./Button";
 import Input from "./Input";
 import Select from "./Select";
@@ -29,8 +28,10 @@ const AskQuestion = () => {
   const [selectedModel, setSelectedModel] =
     useState<string>(DEFAULT_CHAT_MODEL);
   // Using global state from Zustand store instead of local state
-  const { quizData, setQuizData, setAllQuizData, addQuizToCollection } =
+  const { quizData, allQuizData, setQuizData, setAllQuizData } =
     useQuizStore();
+
+    console.log("check allQuizData", allQuizData);
 
   // Initialize the quiz cache hook
   const {
@@ -82,7 +83,6 @@ const AskQuestion = () => {
       setCountCacheQuestions(
         data?.[customQuestion || questionValue]?.length || 0
       );
-      setSelectedCacheIndex(0);
     },
     [data, questionValue]
   );
@@ -94,12 +94,6 @@ const AskQuestion = () => {
       );
       setQuizData(cleanedResult);
 
-      // Add to allQuizData collection with unique ID
-      const quizId = `quiz-${questionValue.substring(
-        0,
-        15
-      )}-${uuidv4().substring(0, 8)}`;
-      addQuizToCollection(quizId, cleanedResult);
       updateCountCacheQuestions(questionValue);
     }
   }, [
@@ -107,7 +101,6 @@ const AskQuestion = () => {
     questionValue,
     selectedCacheIndex,
     setQuizData,
-    addQuizToCollection,
     updateCountCacheQuestions,
   ]);
 
@@ -117,6 +110,7 @@ const AskQuestion = () => {
       for (const value of data[questionValue]) {
         newData.push(cleanUpResult(value));
       }
+      console.log("newData", newData);
       setAllQuizData(newData);
     }
   }, [data, questionValue, setAllQuizData]);
@@ -129,7 +123,9 @@ const AskQuestion = () => {
 
       updateCountCacheQuestions(question);
       if (data[question]?.[selectedCacheIndex]) {
+        console.log("data[question][selectedCacheIndex]", {...data[question]});
         const cleanedResult = cleanUpResult(data[question][selectedCacheIndex]);
+        console.log("cleanedResult", cleanedResult);
         setQuizData(cleanedResult);
       } else {
         setQuizData(null);

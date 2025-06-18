@@ -23,7 +23,6 @@ interface QuizState {
   // Collection of all quiz data
   allQuizData: Questions[];
   setAllQuizData: (data: Questions[]) => void;
-  addQuizToCollection: (key: string, data: Questions) => void;
   removeQuizFromCollection: (key: string) => void;
 }
 
@@ -36,11 +35,6 @@ export const useQuizStore = create<QuizState>((set) => ({
   // Collection of all quiz data
   allQuizData: [],
   setAllQuizData: (data) => set({ allQuizData: data }),
-  
-  // Add a single quiz to the collection
-  addQuizToCollection: (key, data) => set((state) => ({
-    allQuizData: { ...state.allQuizData, [key]: data }
-  })),
   
   // Remove a quiz from the collection
   removeQuizFromCollection: (key) => set((state) => {

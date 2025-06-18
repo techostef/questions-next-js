@@ -9,7 +9,6 @@ import {
   useQuizListeningStore,
   ListeningQuizData,
 } from "@/store/quizListeningStore";
-import { v4 as uuidv4 } from "uuid";
 import Button from "./Button";
 import Input from "./Input";
 import Select from "./Select";
@@ -34,7 +33,7 @@ const AskListeningQuestion = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Using global state from Zustand store
-  const { quizData, setQuizData, setAllQuizData, addQuizToCollection } =
+  const { quizData, setQuizData, setAllQuizData } =
     useQuizListeningStore();
 
   // Setup react-hook-form
@@ -72,9 +71,8 @@ const AskListeningQuestion = () => {
       setCountCacheQuestions(
         listeningData?.[customQuestion || questionValue]?.length || 0
       );
-      setSelectedCacheIndex(0);
     },
-    [listeningData, questionValue, setSelectedCacheIndex]
+    [listeningData, questionValue]
   );
 
   useEffect(() => {
@@ -84,12 +82,6 @@ const AskListeningQuestion = () => {
       );
       setQuizData(cleanedResult);
 
-      // Add to allQuizData collection with unique ID
-      const quizId = `listening-${questionValue.substring(
-        0,
-        15
-      )}-${uuidv4().substring(0, 8)}`;
-      addQuizToCollection(quizId, cleanedResult);
       updateCountCacheQuestions(questionValue);
     }
   }, [
@@ -97,7 +89,6 @@ const AskListeningQuestion = () => {
     questionValue,
     selectedCacheIndex,
     setQuizData,
-    addQuizToCollection,
     updateCountCacheQuestions,
   ]);
 

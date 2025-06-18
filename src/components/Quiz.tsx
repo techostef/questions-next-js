@@ -13,6 +13,7 @@ export default function Quiz() {
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
+  console.log("Quiz allQuizData", allQuizData);
   // Combine all questions when useAllQuizzes is true
   const activeQuizData = useMemo(() => {
     if (!useAllQuizzes) return quizData;

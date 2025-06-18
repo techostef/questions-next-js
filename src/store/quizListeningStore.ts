@@ -28,7 +28,6 @@ interface QuizListeningStore {
   isAudioPlaying: boolean;
   setQuizData: (data: ListeningQuizData | null) => void;
   setAllQuizData: (data: ListeningQuizData[]) => void;
-  addQuizToCollection: (id: string, data: ListeningQuizData) => void;
   setCurrentAudioIndex: (index: number) => void;
   setIsAudioPlaying: (isPlaying: boolean) => void;
 }
@@ -45,14 +44,6 @@ const useQuizListeningStore = create<QuizListeningStore>((set) => ({
   
   setAllQuizData: (data) => set({ allQuizData: data }),
   
-  addQuizToCollection: (id, data) => 
-    set((state) => ({
-      quizCollection: {
-        ...state.quizCollection,
-        [id]: data
-      }
-    })),
-    
   setCurrentAudioIndex: (index) => set({ currentAudioIndex: index }),
   
   setIsAudioPlaying: (isPlaying) => set({ isAudioPlaying: isPlaying })
