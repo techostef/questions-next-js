@@ -20,6 +20,7 @@ export interface AskQuestionMethods {
 }
 
 const AskQuestion = () => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoadingMain, setIsLoadingMain] = useState(false);
   const [cachedQuestions, setCachedQuestions] = useState<string[]>([]);
   const [showCachedQuestions, setShowCachedQuestions] = useState(false);
@@ -37,7 +38,7 @@ const AskQuestion = () => {
     data,
     getAllFromCache,
     isLoading: isLoadingAllCache,
-    errorMessage,
+    errorMessage: errorMessageCache,
     clearError,
   } = useQuizCache();
 
@@ -46,7 +47,6 @@ const AskQuestion = () => {
     register,
     handleSubmit,
     setValue,
-    setError: setFormError,
     watch,
     formState: { errors },
     reset,
@@ -157,12 +157,7 @@ const AskQuestion = () => {
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      if (error instanceof Error) {
-        setFormError("question", {
-          type: "server",
-          message: error.message,
-        });
-      }
+      setErrorMessage(error instanceof Error ? error.message : String(error));
     } finally {
       setIsLoadingMain(false);
     }
@@ -171,9 +166,9 @@ const AskQuestion = () => {
   return (
     <>
       <div className="pt-4">
-        {errorMessage && (
+        {errorMessageCache || errorMessage && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-            <strong className="font-bold">Error:</strong> {errorMessage}
+            <strong className="font-bold">Error:</strong> {errorMessageCache || errorMessage}
           </div>
         )}
         {/* Model Selection */}
