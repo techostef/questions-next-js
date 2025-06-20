@@ -43,7 +43,7 @@ export default function StoriesPage() {
   const storyContentRef = useRef<HTMLDivElement>(null);
 
   // Speech synthesis for reading the story
-  const { speak, stop } = useSpeechSynthesis();
+  const { speak, stop, isPlaying } = useSpeechSynthesis();
 
   // Define state to track recording status (replaced speech recognition)
   const [isRecording, setIsRecording] = useState(false);
@@ -339,6 +339,12 @@ export default function StoriesPage() {
     stop();
     setIsReading(false);
   }, [stop]);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      stopPlayback();
+    }
+  }, [isPlaying, stopPlayback]);
 
   // Generate highlighted text with matched and missed words
   const getHighlightedText = useCallback(() => {

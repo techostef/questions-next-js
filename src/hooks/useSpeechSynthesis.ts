@@ -12,6 +12,7 @@ const DELAY_BETWEEN_CHUNKS = 50;
  */
 export function useSpeechSynthesis() {
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [voiceType, setVoiceType] = useState<VoiceType>(() => {
     // Load cached voice type on initial render
     if (typeof window !== 'undefined') {
@@ -94,6 +95,7 @@ export function useSpeechSynthesis() {
 
   // Speech synthesis function
   const speak = useCallback((text: string, isSSML: boolean = false) => {
+    setIsPlaying(true);
     // Reset the intentionally stopped flag when starting new speech
     isIntentionallyStopped.current = false;
     if (typeof window === "undefined") return;
@@ -207,6 +209,12 @@ export function useSpeechSynthesis() {
       
       // Start speaking the first chunk
       speakNextChunk();
+      const checkSpeechEnd = setInterval(() => {
+        if (!window.speechSynthesis.speaking) {
+          setIsPlaying(false);
+          clearInterval(checkSpeechEnd);
+        }
+      }, 100);
       
       return; // No need to return utterance since we're handling them internally
     } catch (error) {
@@ -236,6 +244,7 @@ export function useSpeechSynthesis() {
   }, []);
 
   return {
+    isPlaying,
     speak,      // Function to speak text
     stop,       // Function to stop speaking
     voiceType,  // Current voice type

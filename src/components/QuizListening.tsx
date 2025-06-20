@@ -12,17 +12,17 @@ export default function QuizListening() {
     allQuizData,
     currentAudioIndex,
     setCurrentAudioIndex,
-    setIsAudioPlaying,
   } = useQuizListeningStore();
+
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [showResults, setShowResults] = useState(false);
   const [useAllQuizzes, setUseAllQuizzes] = useState(false);
   const [isQuizDialogOpen, setIsQuizDialogOpen] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // Initialize speech synthesis hook
-  const { speak, stop, isSupported } = useSpeechSynthesis();
+  const { speak, isPlaying, isSupported } = useSpeechSynthesis();
+  console.log("isPlaying", isPlaying);
 
   // Combine all questions when useAllQuizzes is true
   const activeQuizData = useMemo(() => {
@@ -67,38 +67,12 @@ export default function QuizListening() {
 
   const handlePlayAudio = async (index: number, audioPrompt: string) => {
     try {
-      // If already playing this audio, pause it
-      if (currentAudioIndex === index && isPlaying) {
-        stop();
-        setIsPlaying(false);
-        setIsAudioPlaying(false);
-        return;
-      }
-
-      // Stop any currently playing audio
-      if (isPlaying) {
-        stop();
-        setIsPlaying(false);
-        setIsAudioPlaying(false);
-      }
-
       // Update the current audio index
       setCurrentAudioIndex(index);
 
       // Use speech synthesis to speak the text
       if (isSupported) {
         speak(audioPrompt);
-        setIsPlaying(true);
-        setIsAudioPlaying(true);
-
-        // Set up event to detect when speech ends
-        const checkSpeechEnd = setInterval(() => {
-          if (!window.speechSynthesis.speaking) {
-            setIsPlaying(false);
-            setIsAudioPlaying(false);
-            clearInterval(checkSpeechEnd);
-          }
-        }, 100);
       } else {
         console.error("Speech synthesis is not supported in this browser");
       }

@@ -25,11 +25,9 @@ interface QuizListeningStore {
   allQuizData: ListeningQuizData[];
   quizCollection: Record<string, ListeningQuizData>;
   currentAudioIndex: number;
-  isAudioPlaying: boolean;
   setQuizData: (data: ListeningQuizData | null) => void;
   setAllQuizData: (data: ListeningQuizData[]) => void;
   setCurrentAudioIndex: (index: number) => void;
-  setIsAudioPlaying: (isPlaying: boolean) => void;
 }
 
 // Create the quiz listening store
@@ -38,7 +36,6 @@ const useQuizListeningStore = create<QuizListeningStore>((set) => ({
   allQuizData: [],
   quizCollection: {},
   currentAudioIndex: -1,
-  isAudioPlaying: false,
   
   setQuizData: (data) => set({ quizData: data }),
   
@@ -46,7 +43,6 @@ const useQuizListeningStore = create<QuizListeningStore>((set) => ({
   
   setCurrentAudioIndex: (index) => set({ currentAudioIndex: index }),
   
-  setIsAudioPlaying: (isPlaying) => set({ isAudioPlaying: isPlaying })
 }));
 
 export { useQuizListeningStore };
