@@ -138,77 +138,291 @@ export function useSpeechSynthesis() {
         }
       }
       
-      // Split text into chunks
-      const chunks = splitTextIntoChunks(processedText, MAX_CHUNK_LENGTH);
-      chunksToSpeakRef.current = [...chunks];
+      // Check if this is a conversation with "Man:" and "Woman:" prefixes
+      const manPattern = /\b(?:Man|MAN):\s*/;
+      const womanPattern = /\b(?:Woman|WOMAN|Lady|LADY):\s*/;
+      const hasManParts = manPattern.test(processedText);
+      const hasWomanParts = womanPattern.test(processedText);
+      const isConversation = hasManParts || hasWomanParts;
       
-      // Function to speak the next chunk
-      const speakNextChunk = () => {
-        if (chunksToSpeakRef.current.length === 0) {
-          isSpeakingRef.current = false;
-          return;
-        }
+      if (isConversation) {
+        // Handle conversation with different voices
+        // Split the text by speaker markers
+        const conversationParts: { type: 'male' | 'female' | 'default', text: string }[] = [];
         
-        isSpeakingRef.current = true;
-        const chunk = chunksToSpeakRef.current.shift() || '';
+        // Use regex to match dialogue parts
+        const dialogueRegex = /\b(Man|Woman|MAN|WOMAN|Lady|LADY):\s*([^\n]*)(?:\n|$)/g;
+        let match;
+        let lastIndex = 0;
         
-        // Create a new utterance for this chunk
-        const utterance = new SpeechSynthesisUtterance(chunk);
-        
-        // Set SSML mode if supported and if the content is SSML
-        // Microsoft Edge is the main browser with good SSML support
-        const isEdge = typeof window !== 'undefined' && navigator.userAgent.indexOf('Edg') !== -1;
-        
-        if (isSSML && isEdge && 'SpeechSynthesisUtterance' in window) {
-          try {
-            // For Edge browser which supports SSML
-            // @ts-expect-error - this is a non-standard property supported in Microsoft Edge
-            utterance.inputType = 'ssml';
-          } catch (error) {
-            console.warn('SSML inputType not supported in this browser', error);
+        // Extract marked conversation parts
+        while ((match = dialogueRegex.exec(processedText)) !== null) {
+          const speakerType = match[1].toLowerCase() === 'man' ? 'male' : 'female';
+          const dialogueText = match[2].trim();
+          
+          if (dialogueText) {
+            conversationParts.push({ type: speakerType, text: dialogueText });
           }
+          
+          lastIndex = match.index + match[0].length;
         }
         
-        // Set up event for when this chunk is done
-        utterance.onend = () => {
-          setTimeout(speakNextChunk, DELAY_BETWEEN_CHUNKS); // Small delay between chunks
+        // Handle any remaining text after the last marked dialogue
+        const remainingText = processedText.slice(lastIndex).trim();
+        if (remainingText) {
+          conversationParts.push({ type: 'default', text: remainingText });
+        }
+        
+        // Process each conversation part separately
+        const conversationChunks: { voice: 'male' | 'female' | 'default', text: string }[] = [];
+        
+        conversationParts.forEach(part => {
+          const partChunks = splitTextIntoChunks(part.text, MAX_CHUNK_LENGTH);
+          partChunks.forEach(chunk => {
+            conversationChunks.push({ voice: part.type, text: chunk });
+          });
+        });
+        
+        // Function to speak the next conversation chunk with appropriate voice
+        const speakNextConversationChunk = () => {
+          if (conversationChunks.length === 0) {
+            isSpeakingRef.current = false;
+            return;
+          }
+          
+          isSpeakingRef.current = true;
+          const { voice: chunkVoice, text: chunkText } = conversationChunks.shift()!;
+          // Create a new utterance for this chunk
+          const utterance = new SpeechSynthesisUtterance(chunkText);
+          
+          // Reset pitch to default for each new utterance
+          utterance.pitch = 1.0;
+          
+          // Set voice based on the speaker
+          if (availableVoices.length > 0) {
+            if (chunkVoice === 'male') {
+              // Enhanced male voice detection
+              const maleCandidates = availableVoices.filter(voice => {
+                const name = voice.name.toLowerCase();
+                // Check for common male voice indicators
+                return name.includes('male') || 
+                       name.includes('man') || 
+                       name.includes('guy') || 
+                       name.includes('david') || 
+                       name.includes('tom') || 
+                       name.includes('jack') ||
+                       name.includes('richard') ||
+                       name.includes('daniel') ||
+                       // If voice has gender property (some implementations have this)
+                       // @ts-expect-error - non-standard property
+                       (voice.gender === 'male');
+              });
+              // Use the first male candidate if found
+              if (maleCandidates.length > 0) {
+                utterance.voice = maleCandidates.find(v => v.name.includes('Google UK English Male')) ?? maleCandidates[0];
+                // Enforce a lower pitch for male voice
+                utterance.pitch = 0.8;
+              } else {
+                // If no specific male voice found, try to find a deeper voice
+                // as a fallback (some voices may not have male/female in name)
+                utterance.pitch = 0.8; // Lower pitch for male sound
+              }
+            } else if (chunkVoice === 'female') {
+              // Enhanced female voice detection
+              const femaleCandidates = availableVoices.filter(voice => {
+                const name = voice.name.toLowerCase();
+                // Check for common female voice indicators
+                return name.includes('female') || 
+                       name.includes('woman') ||
+                       name.includes('girl') ||
+                       name.includes('lisa') ||
+                       name.includes('mary') ||
+                       name.includes('sarah') ||
+                       name.includes('julia') ||
+                       // Exclude explicit male voices
+                       (!name.includes('male') && !name.includes('man')) ||
+                       // If voice has gender property
+                       // @ts-expect-error - non-standard property
+                       (voice.gender === 'female');
+              });
+              
+              // First try to find an explicit female voice
+              const explicitFemaleVoice = femaleCandidates.find(voice => {
+                const name = voice.name.toLowerCase();
+                return name.includes('female') || name.includes('woman');
+              });
+              
+              if (explicitFemaleVoice) {
+                utterance.voice = explicitFemaleVoice;
+              } else if (femaleCandidates.length > 0) {
+                // Otherwise use any candidate that matched
+                utterance.voice = femaleCandidates[0];
+              } else {
+                // As last resort, try to use a different voice than the male one
+                // Find a voice that's not explicitly male
+                const nonMaleVoice = availableVoices.find(voice => {
+                  const name = voice.name.toLowerCase();
+                  return !name.includes('male') && !name.includes('man');
+                });
+                
+                if (nonMaleVoice) {
+                  utterance.voice = nonMaleVoice;
+                }
+                
+                // Fallback - try to create a higher pitched voice
+                utterance.pitch = 1.3; // Higher pitch for female sound
+                utterance.rate = 1.05; // Slightly faster rate
+              }
+            } else {
+              // Use the user's preferred voice type for unspecified speaker parts
+              if (voiceType === 'male') {
+                const maleVoice = availableVoices.find(
+                  (voice) => voice.name.toLowerCase().includes("male") || 
+                             voice.name.toLowerCase().includes("man")
+                );
+                if (maleVoice) utterance.voice = maleVoice;
+              } else if (voiceType === 'female') {
+                const femaleVoice = availableVoices.find(
+                  (voice) => voice.name.toLowerCase().includes("female") || 
+                             voice.name.toLowerCase().includes("woman")
+                );
+                if (femaleVoice) utterance.voice = femaleVoice;
+              }
+            }
+          }
+          
+          // Set SSML mode if supported and if the content is SSML
+          const isEdge = typeof window !== 'undefined' && navigator.userAgent.indexOf('Edg') !== -1;
+          if (isSSML && isEdge && 'SpeechSynthesisUtterance' in window) {
+            try {
+              // @ts-expect-error - this is a non-standard property supported in Microsoft Edge
+              utterance.inputType = 'ssml';
+            } catch (error) {
+              console.warn('SSML inputType not supported in this browser', error);
+            }
+          }
+          
+          // Set up event for when this chunk is done
+          utterance.onend = () => {
+            setTimeout(speakNextConversationChunk, DELAY_BETWEEN_CHUNKS); // Small delay between chunks
+          };
+          
+          utterance.onerror = () => {
+            // Only continue to the next chunk if we haven't intentionally stopped
+            if (!isIntentionallyStopped.current) {
+              setTimeout(speakNextConversationChunk, DELAY_BETWEEN_CHUNKS); // Try next chunk only if not stopped
+            }
+          };
+          
+          // Start speaking this chunk
+          window.speechSynthesis.speak(utterance);
         };
         
-        utterance.onerror = () => {
-          // Only continue to the next chunk if we haven't intentionally stopped
-          if (!isIntentionallyStopped.current) {
-            setTimeout(speakNextChunk, DELAY_BETWEEN_CHUNKS); // Try next chunk only if not stopped
+        // Start speaking the first conversation chunk
+        speakNextConversationChunk();
+      } else {
+        // Regular non-conversation text processing
+        // Split text into chunks
+        const chunks = splitTextIntoChunks(processedText, MAX_CHUNK_LENGTH);
+        chunksToSpeakRef.current = [...chunks];
+        
+        // Function to speak the next chunk
+        const speakNextChunk = () => {
+          if (chunksToSpeakRef.current.length === 0) {
+            isSpeakingRef.current = false;
+            return;
           }
+          
+          isSpeakingRef.current = true;
+          const chunk = chunksToSpeakRef.current.shift() || '';
+          
+          // Create a new utterance for this chunk
+          const utterance = new SpeechSynthesisUtterance(chunk);
+          
+          // Set SSML mode if supported and if the content is SSML
+          // Microsoft Edge is the main browser with good SSML support
+          const isEdge = typeof window !== 'undefined' && navigator.userAgent.indexOf('Edg') !== -1;
+          
+          if (isSSML && isEdge && 'SpeechSynthesisUtterance' in window) {
+            try {
+              // For Edge browser which supports SSML
+              // @ts-expect-error - this is a non-standard property supported in Microsoft Edge
+              utterance.inputType = 'ssml';
+            } catch (error) {
+              console.warn('SSML inputType not supported in this browser', error);
+            }
+          }
+          
+          // Set up event for when this chunk is done
+          utterance.onend = () => {
+            setTimeout(speakNextChunk, DELAY_BETWEEN_CHUNKS); // Small delay between chunks
+          };
+          
+          utterance.onerror = () => {
+            // Only continue to the next chunk if we haven't intentionally stopped
+            if (!isIntentionallyStopped.current) {
+              setTimeout(speakNextChunk, DELAY_BETWEEN_CHUNKS); // Try next chunk only if not stopped
+            }
+          };
+
+          // Find the appropriate voice based on user preference
+          if (availableVoices.length > 0) {
+            // Default behavior: use the browser's default voice
+            if (voiceType === "default") {
+              // No need to set a voice, browser will use default
+            } 
+            // Try to find a male voice
+            else if (voiceType === "male") {
+              // Enhanced male voice detection
+              const maleCandidates = availableVoices.filter(voice => {
+                const name = voice.name.toLowerCase();
+                return name.includes('male') || 
+                       name.includes('man') || 
+                       name.includes('guy') || 
+                       name.includes('david') || 
+                       name.includes('tom') || 
+                       name.includes('jack') ||
+                       // @ts-expect-error - non-standard property
+                       (voice.gender === 'male');
+              });
+              
+              if (maleCandidates.length > 0) {
+                utterance.voice = maleCandidates[2];
+              } else {
+                // Fallback to pitch adjustment
+                utterance.pitch = 0.8;
+              }
+            } 
+            // Try to find a female voice
+            else if (voiceType === "female") {
+              // Enhanced female voice detection
+              const femaleCandidates = availableVoices.filter(voice => {
+                const name = voice.name.toLowerCase();
+                return name.includes('female') || 
+                       name.includes('woman') ||
+                       name.includes('girl') ||
+                       name.includes('lisa') ||
+                       name.includes('mary') ||
+                       // @ts-expect-error - non-standard property
+                       (voice.gender === 'female');
+              });
+              
+              if (femaleCandidates.length > 0) {
+                utterance.voice = femaleCandidates[0];
+              } else {
+                // Fallback to pitch adjustment
+                utterance.pitch = 1.2;
+              }
+            }
+          }
+
+          // Start speaking this chunk
+          window.speechSynthesis.speak(utterance);
         };
-
-        // Find the appropriate voice based on user preference
-        if (availableVoices.length > 0) {
-          // Default behavior: use the browser's default voice
-          if (voiceType === "default") {
-            // No need to set a voice, browser will use default
-          } 
-          // Try to find a male voice
-          else if (voiceType === "male") {
-            const maleVoice = availableVoices.find(
-              (voice) => voice.name.includes("Male") || voice.name.includes("male")
-            );
-            if (maleVoice) utterance.voice = maleVoice;
-          } 
-          // Try to find a female voice
-          else if (voiceType === "female") {
-            const femaleVoice = availableVoices.find(
-              (voice) => voice.name.includes("Female") || voice.name.includes("female")
-            );
-            if (femaleVoice) utterance.voice = femaleVoice;
-          }
-        }
-
-        // Start speaking this chunk
-        window.speechSynthesis.speak(utterance);
-      };
-      
-      // Start speaking the first chunk
-      speakNextChunk();
+        
+        // Start speaking the first chunk
+        speakNextChunk();
+      }
       const checkSpeechEnd = setInterval(() => {
         if (!window.speechSynthesis.speaking) {
           setIsPlaying(false);

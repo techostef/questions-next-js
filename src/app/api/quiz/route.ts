@@ -55,7 +55,7 @@ export async function POST(req) {
     const openai = getOpenAIClient();
 
     const cachedResult = getCachedResult(messages);
-    const additionalMessage = cachedResult ? ".Please give me another questions." : "";
+    const additionalMessage = cachedResult ? ".Please give me other questions." : "";
 
     const completion = await openai.chat.completions.create({
       model: selectedModel,
