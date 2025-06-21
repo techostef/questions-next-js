@@ -6,6 +6,47 @@ type VoiceType = 'default' | 'male' | 'female';
 
 const DELAY_BETWEEN_CHUNKS = 50;
 
+function convertConversationToArray(conversation) {
+  const manKeywords = ['man', 'boy', 'dad', 'daddy', 'father', 'sir', 'brother', 'uncle', 'he', 'him', 'his'];
+  let isFirst = true;
+  let firstType = 'male';
+
+  return conversation
+    .split('\n')
+    .map((line: string, index: number) => {
+      const match = line.match(/^([^:]+):\s*(.+)$/);
+      if (match) {
+        const speaker = match[1].trim();
+        const text = match[2].trim();
+        const lowercaseText = text.toLowerCase();
+
+        const isMan = manKeywords.findIndex(keyword => lowercaseText.includes(keyword));
+        let type = 'male';
+        if (isFirst) {
+          isFirst = false;
+          type = isMan !== -1 ? 'male' : 'female';
+          firstType = type;
+        } else {
+          type = firstType === 'male' ? (index % 2 === 0 ? 'male' : 'female') : (index % 2 === 0 ? 'female' : 'male');
+        }
+        return {
+          speaker,
+          text,
+          type
+        };
+      }
+      return null;
+    })
+    .filter(entry => entry !== null);
+}
+
+// function alternateGender(data) {
+//   return data.map((value, index) => {
+//     if (index === 0) return value;
+//     return data[0].type === 'male' ? (index % 2 === 0 ? 'male' : 'female') : (index % 2 === 0 ? 'female' : 'male');
+//   });
+// }
+
 /**
  * Custom hook for speech synthesis functionality
  * @returns Speech synthesis functions and state
@@ -139,46 +180,19 @@ export function useSpeechSynthesis() {
       }
       
       // Check if this is a conversation with "Man:" and "Woman:" prefixes
-      const manPattern = /\b(?:Man|MAN):\s*/;
-      const womanPattern = /\b(?:Woman|WOMAN|Lady|LADY):\s*/;
-      const hasManParts = manPattern.test(processedText);
-      const hasWomanParts = womanPattern.test(processedText);
-      const isConversation = hasManParts || hasWomanParts;
+      const isConversation = processedText.includes('\n');
       
       if (isConversation) {
         // Handle conversation with different voices
         // Split the text by speaker markers
-        const conversationParts: { type: 'male' | 'female' | 'default', text: string }[] = [];
-        
-        // Use regex to match dialogue parts
-        const dialogueRegex = /\b(Man|Woman|MAN|WOMAN|Lady|LADY):\s*([^\n]*)(?:\n|$)/g;
-        let match;
-        let lastIndex = 0;
-        
-        // Extract marked conversation parts
-        while ((match = dialogueRegex.exec(processedText)) !== null) {
-          const speakerType = match[1].toLowerCase() === 'man' ? 'male' : 'female';
-          const dialogueText = match[2].trim();
-          
-          if (dialogueText) {
-            conversationParts.push({ type: speakerType, text: dialogueText });
-          }
-          
-          lastIndex = match.index + match[0].length;
-        }
-        
-        // Handle any remaining text after the last marked dialogue
-        const remainingText = processedText.slice(lastIndex).trim();
-        if (remainingText) {
-          conversationParts.push({ type: 'default', text: remainingText });
-        }
+        const conversationParts = convertConversationToArray(processedText);
         
         // Process each conversation part separately
         const conversationChunks: { voice: 'male' | 'female' | 'default', text: string }[] = [];
         
-        conversationParts.forEach(part => {
+        conversationParts.forEach((part) => {
           const partChunks = splitTextIntoChunks(part.text, MAX_CHUNK_LENGTH);
-          partChunks.forEach(chunk => {
+          partChunks.forEach((chunk) => {
             conversationChunks.push({ voice: part.type, text: chunk });
           });
         });
@@ -245,7 +259,6 @@ export function useSpeechSynthesis() {
                        // @ts-expect-error - non-standard property
                        (voice.gender === 'female');
               });
-              
               // First try to find an explicit female voice
               const explicitFemaleVoice = femaleCandidates.find(voice => {
                 const name = voice.name.toLowerCase();

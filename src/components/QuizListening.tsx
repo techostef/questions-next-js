@@ -22,7 +22,6 @@ export default function QuizListening() {
 
   // Initialize speech synthesis hook
   const { speak, isPlaying, isSupported } = useSpeechSynthesis();
-  console.log("isPlaying", isPlaying);
 
   // Combine all questions when useAllQuizzes is true
   const activeQuizData = useMemo(() => {
