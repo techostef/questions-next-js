@@ -8,7 +8,7 @@ export const QUIZ_CACHE_KEYS = {
 
 // Function to fetch all cached quizzes
 const fetchAllCachedQuizzes = async () => {
-  const response = await fetch('/api/cache-quiz', {
+  const response = await fetch('/api/quiz-admin', {
     method: 'GET',
   });
   

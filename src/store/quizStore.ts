@@ -1,18 +1,20 @@
 import { create } from 'zustand';
 
+export interface Question {
+  question: string;
+  options: {
+    a: string;
+    b: string;
+    c: string;
+    d: string;
+  };
+  answer: string;
+  reason: string;
+}
+
 // Using the same Questions interface as in AskQuestion.tsx
 export interface Questions {
-  questions: {
-    question: string;
-    options: {
-      a: string;
-      b: string;
-      c: string;
-      d: string;
-    };
-    answer: string;
-    reason: string;
-  }[];
+  questions: Question[];
 }
 
 interface QuizState {

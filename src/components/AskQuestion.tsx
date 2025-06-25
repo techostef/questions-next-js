@@ -79,17 +79,19 @@ const AskQuestion = () => {
 
   const updateCountCacheQuestions = useCallback(
     (customQuestion?: string) => {
+      const selectedData = data?.find((item) => item.query === customQuestion || questionValue);
       setCountCacheQuestions(
-        data?.[customQuestion || questionValue]?.length || 0
+        selectedData?.responses?.length || 0
       );
     },
     [data, questionValue]
   );
 
   useEffect(() => {
-    if (data && questionValue && data[questionValue]) {
+    const selectedData = data?.find((item) => item.query === questionValue);
+    if (selectedData) {
       const cleanedResult = cleanUpResult(
-        data[questionValue][selectedCacheIndex]
+        selectedData.responses[selectedCacheIndex]
       );
       setQuizData(cleanedResult);
 
@@ -104,10 +106,12 @@ const AskQuestion = () => {
   ]);
 
   useEffect(() => {
-    if (data && questionValue && data[questionValue]) {
+    const selectedData = data?.find((item) => item.query === questionValue);
+    if (selectedData) {
       const newData: Questions[] = [];
-      for (const value of data[questionValue]) {
-        newData.push(cleanUpResult(value));
+      for (const item of selectedData.responses) {
+        const cleanData = JSON.parse(item.content);
+        newData.push(cleanData);
       }
       setAllQuizData(newData);
     }
@@ -141,7 +145,7 @@ const AskQuestion = () => {
       const messageContent = customPrompt || questionValue;
       if (!customPrompt) reset({ question: "" });
 
-      const res = await fetch("/api/quiz", {
+      const res = await fetch("/api/quiz-admin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -202,7 +206,7 @@ const AskQuestion = () => {
                 const questionText = question.length > 50
                 ? question.substring(0, 50) + "..."
                 : question;
-                const lengthData = data?.[question]?.length || 0;
+                const lengthData = data?.find((item) => item.query === question)?.responses?.length || 0;
                 return (
                   <button
                     key={index}
