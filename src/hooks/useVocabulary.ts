@@ -9,9 +9,9 @@ export interface EnglishWord {
   v1: string;
   v2: string;
   v3: string;
-  exampleSentence1: string;
-  exampleSentence2: string;
-  exampleSentence3: string;
+  example_sentence1: string;
+  example_sentence2: string;
+  example_sentence3: string;
 }
 
 // React Query key for vocabulary data
@@ -23,7 +23,8 @@ const fetchVocabulary = async (): Promise<EnglishWord[]> => {
   if (!response.ok) {
     throw new Error(`Error: ${response.status} ${response.statusText}`);
   }
-  return response.json();
+  const result = await response.json();
+  return result;
 };
 
 // Custom hook to fetch vocabulary data with React Query

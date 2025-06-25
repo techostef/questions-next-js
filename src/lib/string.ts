@@ -243,3 +243,20 @@ function getContext(words: string[], index: number, windowSize = 2) {
   const end = Math.min(words.length, index + windowSize + 1);
   return words.slice(start, end).join(" ");
 }
+
+export function toPascalCase(str: string) {
+  // Handle empty or non-string inputs
+  if (!str || typeof str !== 'string') {
+    return '';
+  }
+
+  return str
+    .toLowerCase() // Convert the entire string to lowercase for consistency
+    .replace(/[^a-zA-Z0-9]+/g, ' ') // Replace non-alphanumeric characters with spaces
+    .split(' ') // Split the string into an array of words
+    .map(word => {
+      // Capitalize the first letter and lowercase the rest of each word
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(''); // Join the words back together without spaces
+}

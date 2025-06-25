@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { DEFAULT_CHAT_MODEL } from '@/constants/listModelsOpenAI';
-import { updateGist } from '@/utils/githubGist';
-
-// Gist ID for bank-english
-const GIST_ID = '1556b6ba9012fab30e737c03bade8c7e';
-
-// URL to fetch the current content
-const URL_CACHE = `https://gist.githubusercontent.com/techostef/${GIST_ID}/raw/bankenglish.json`;
+import { WordDictionaryItem, addWords, wordExists } from '@/lib/supabase-bank-english';
 
 // Initialize OpenAI with runtime environment variables
 const getOpenAIClient = () => {
@@ -37,34 +31,12 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Fetch existing dictionary data
-    const existingDataResponse = await fetch(URL_CACHE);
-    const data = await existingDataResponse.json();
-    const wordList = data?.result ? data.result : data;
-
     // Process each word
     const newWords = [];
     
     for (const word of body.words) {
-      // Define interface for word structure
-      interface WordDictionaryItem {
-        word: string;
-        mean: string;
-        description: string;
-        antonym: string;
-        synonyms: string;
-        v1: string;
-        v2: string;
-        v3: string;
-        exampleSentence1: string;
-        exampleSentence2: string;
-        exampleSentence3: string;
-      }
-      
-      // Check if word already exists
-      const exists = wordList.some((item: WordDictionaryItem) => 
-        item.word.toLowerCase() === word.toLowerCase()
-      );
+      // Check if word already exists in Supabase
+      const exists = await wordExists(word);
       
       if (exists) {
         continue; // Skip existing words
@@ -107,20 +79,39 @@ export async function POST(request: Request) {
       }
     }
     
-    // Add new words to the list
-    const updatedWordList = [...wordList, ...newWords];
+    // Add new words to Supabase
+    if (newWords.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'No new words to add',
+        addedWords: []
+      });
+    }
+
+    const newWordsList: WordDictionaryItem[] = newWords.map(word => ({
+      word: word.word,
+      mean: word.mean,
+      description: word.description,
+      antonym: word.antonym,
+      synonyms: word.synonyms,
+      v1: word.v1,
+      v2: word.v2,
+      v3: word.v3,
+      example_sentence1: word.exampleSentence1,
+      example_sentence2: word.exampleSentence2,
+      example_sentence3: word.exampleSentence3,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }));
+    const result = await addWords(newWordsList);
     
-    // Update the gist
-    const githubToken = process.env.GIT_UPDATE_SECRET;
-    
-    if (!githubToken) {
+    if (!result.success) {
       return NextResponse.json({
         success: false,
-        message: 'GitHub token not found in environment variables'
+        message: 'Failed to add words to database',
+        error: result.error
       }, { status: 500 });
     }
-    
-    await updateGist(GIST_ID, 'bankenglish.json', updatedWordList);
     
     return NextResponse.json({
       success: true,

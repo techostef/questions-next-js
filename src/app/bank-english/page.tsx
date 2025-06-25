@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { DEFAULT_CHAT_MODEL } from "@/constants/listModelsOpenAI";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import { toPascalCase } from "@/lib/string";
 
 // Now using the EnglishWord interface from useVocabulary hook
 
@@ -73,6 +74,7 @@ export default function BankEnglishPage() {
   
   // Get the queryClient to invalidate queries
   const handleAddWords = async (wordsList: string[]) => {
+    const newWordsList = wordsList.map(word => toPascalCase(word));
     try {
       setIsAddingWords(true);
       
@@ -83,7 +85,7 @@ export default function BankEnglishPage() {
           'x-chat-model': selectedModel,
         },
         body: JSON.stringify({ 
-          words: wordsList,
+          words: newWordsList,
           model: selectedModel 
         }),
       });
@@ -365,7 +367,7 @@ export default function BankEnglishPage() {
                         <h3 className="text-lg font-semibold text-gray-700 mb-2">
                           Antonyms
                         </h3>
-                        <p className="text-gray-600">
+                        <p className="text-gray-600 wrap-break-word">
                           {currentWord.antonym || "None"}
                         </p>
                       </div>
@@ -428,14 +430,14 @@ export default function BankEnglishPage() {
                       Example Sentences
                     </h3>
                     <div className="space-y-2 text-gray-600">
-                      {currentWord.exampleSentence1 && (
+                      {currentWord.example_sentence1 && (
                         <div className="bg-blue-50">
                           <div className="p-2 pb-0 bg-blue-50 rounded">
-                            {currentWord.exampleSentence1}
+                            {currentWord.example_sentence1}
                           </div>
                           <div
                             onClick={() =>
-                              speakCurrentWord(currentWord.exampleSentence1)
+                              speakCurrentWord(currentWord.example_sentence1)
                             }
                             className="cursor-pointer p-2 rounded-full hover:bg-blue-200 transition-colors"
                             title="Listen to pronunciation and meaning"
@@ -444,14 +446,14 @@ export default function BankEnglishPage() {
                           </div>
                         </div>
                       )}
-                      {currentWord.exampleSentence2 && (
+                      {currentWord.example_sentence2 && (
                         <div className="bg-blue-50">
                           <div className="p-2 pb-0 bg-blue-50 rounded">
-                            {currentWord.exampleSentence2}
+                            {currentWord.example_sentence2}
                           </div>
                           <div
                             onClick={() =>
-                              speakCurrentWord(currentWord.exampleSentence2)
+                              speakCurrentWord(currentWord.example_sentence2)
                             }
                             className="cursor-pointer p-2 rounded-full hover:bg-blue-200 transition-colors"
                             title="Listen to pronunciation and meaning"
@@ -460,14 +462,14 @@ export default function BankEnglishPage() {
                           </div>
                         </div>
                       )}
-                      {currentWord.exampleSentence3 && (
+                      {currentWord.example_sentence3 && (
                         <div className="bg-blue-50">
                           <div className="p-2 pb-0 bg-blue-50 rounded">
-                            {currentWord.exampleSentence3}
+                            {currentWord.example_sentence3}
                           </div>
                           <div
                             onClick={() =>
-                              speakCurrentWord(currentWord.exampleSentence3)
+                              speakCurrentWord(currentWord.example_sentence3)
                             }
                             className="cursor-pointer p-2 rounded-full hover:bg-blue-200 transition-colors"
                             title="Listen to pronunciation and meaning"
@@ -476,9 +478,9 @@ export default function BankEnglishPage() {
                           </div>
                         </div>
                       )}
-                      {!currentWord.exampleSentence1 &&
-                        !currentWord.exampleSentence2 &&
-                        !currentWord.exampleSentence3 && (
+                      {!currentWord.example_sentence1 &&
+                        !currentWord.example_sentence2 &&
+                        !currentWord.example_sentence3 && (
                           <div className="italic text-gray-500">
                             No example sentences available
                           </div>

@@ -79,7 +79,8 @@ export default function AddWordDialog({
       footer={
         <div className="flex w-full">
           <Button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             disabled={isLoading}
             variant="primary"
           >
@@ -107,7 +108,7 @@ export default function AddWordDialog({
         />
       </div>
 
-      <form id="add-word-form" onSubmit={handleSubmit}>
+      <form id="add-word-form">
         <div className="overflow-y-auto">
           <label htmlFor="words">
             Enter up to 5 words (separated by commas, spaces, or new lines):
