@@ -17,7 +17,6 @@ export async function addQuizData(query: string, responses: QuizResponse[]) {
       throw new Error(`Failed to add quiz data: ${error.message}`);
     }
 
-    console.log(`Successfully added/updated quiz data for query: "${query}"`);
     return data;
   } catch (error) {
     console.error('Error adding quiz data:', error);
@@ -79,7 +78,6 @@ export async function deleteQuizData(query: string) {
       throw new Error(`Failed to delete quiz data: ${error.message}`);
     }
 
-    console.log(`Successfully deleted quiz data for query: "${query}"`);
     return true;
   } catch (error) {
     console.error('Error deleting quiz data:', error);

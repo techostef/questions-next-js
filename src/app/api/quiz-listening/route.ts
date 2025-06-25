@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { OpenAI } from "openai";
-import { getGistContent, updateGist } from "@/utils/githubGist";
 import { getCachedResult, setCachedResult } from "@/lib/cache";
+import { supabase } from "@/lib/supabase";
 
 const formatChoosenJSON = `
 {
@@ -40,11 +40,18 @@ const getOpenAIClient = () => {
 // Default model selection
 const DEFAULT_MODEL = "gpt-4.1-mini";
 
-const GIST_ID = "bc9350af3cd7821a465e5b4ece52da02";
+// Topic identifier for the quiz data in Supabase
 
 export async function GET() {
   try {
-    const data = await getGistContent(GIST_ID, "listening.json");
+    // Get all quiz listening data from Supabase
+    const { data, error } = await supabase
+      .from('quiz_listening')
+      .select('query, responses')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
     return Response.json(data);
   } catch (error) {
     console.error("Error fetching data:", error);
@@ -80,20 +87,57 @@ export async function POST(req) {
     });
 
     try {
-      // Get data list questions from gists
-      const data = await getGistContent(GIST_ID, "listening.json");
-
-      if (data[messages]) {
-        data[messages].push(completion.choices[0].message);
-      } else {
-        data[messages] = [completion.choices[0].message];
+      // Get existing responses for this query if they exist
+      const { data: existingData, error: fetchError } = await supabase
+        .from('quiz_listening')
+        .select('responses, language')
+        .eq('query', messages)
+        .limit(1);
+      
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error("Error fetching existing data:", fetchError);
+        throw fetchError;
       }
 
-      // Use the utility function to update the Gist
-      await updateGist(GIST_ID, "listening.json", data);
+      // Format the new response
+      const newResponse = completion.choices[0].message;
+      
+      // If we have existing responses for this query, append the new one
+      if (existingData && existingData.length > 0 && Array.isArray(existingData[0].responses)) {
+        // Update the existing record with the appended response
+        const { error: updateError } = await supabase
+          .from('quiz_listening')
+          .update({ 
+            language: existingData[0].language,
+            responses: [...existingData[0].responses, newResponse],
+            updated_at: new Date().toISOString()
+          })
+          .eq('query', messages);
+          
+        if (updateError) {
+          console.error("Error updating Supabase:", updateError);
+          throw updateError;
+        }
+      } else {
+        // Insert a new record
+        const { error: insertError } = await supabase
+          .from('quiz_listening')
+          .insert({
+            query: messages,
+            language: "English",
+            responses: [newResponse],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+          
+        if (insertError) {
+          console.error("Error inserting into Supabase:", insertError);
+          throw insertError;
+        }
+      }
     } catch (error) {
-      console.error("Error updating gist:", error);
-      // Continue even if gist update fails
+      console.error("Error updating Supabase:", error);
+      // Continue even if Supabase update fails
     }
 
     // Store the result in our shared cache

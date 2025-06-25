@@ -19,6 +19,16 @@ export interface AskListeningQuestionMethods {
   loadDifferentQuiz: () => Promise<void>;
 }
 
+interface ListeningData {
+  query: string
+  responses: Response[]
+}
+
+interface Response {
+  role: string
+  content: string
+}
+
 const AskListeningQuestion = () => {
   const [isLoadingMain, setIsLoadingMain] = useState(false);
   const [cachedQuestions, setCachedQuestions] = useState<string[]>([]);
@@ -28,8 +38,8 @@ const AskListeningQuestion = () => {
   const [selectedModel, setSelectedModel] =
     useState<string>(DEFAULT_CHAT_MODEL);
   const [listeningData, setListeningData] = useState<
-    Record<string, Array<unknown>>
-  >({});
+     Array<ListeningData>
+  >([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Using global state from Zustand store
@@ -68,17 +78,19 @@ const AskListeningQuestion = () => {
 
   const updateCountCacheQuestions = useCallback(
     (customQuestion?: string) => {
+      const selectedData = listeningData?.find((item) => item.query === customQuestion || item.query === questionValue);
       setCountCacheQuestions(
-        listeningData?.[customQuestion || questionValue]?.length || 0
+        selectedData?.responses?.length || 0
       );
     },
     [listeningData, questionValue]
   );
 
   useEffect(() => {
-    if (listeningData && questionValue && listeningData[questionValue]) {
+    const selectedData = listeningData?.find((item) => item.query === questionValue);
+    if (selectedData?.responses?.[selectedCacheIndex]) {
       const cleanedResult = cleanUpResult(
-        listeningData[questionValue][selectedCacheIndex]
+        selectedData.responses[selectedCacheIndex]
       );
       setQuizData(cleanedResult);
 
@@ -114,10 +126,11 @@ const AskListeningQuestion = () => {
   };
 
   useEffect(() => {
-    if (listeningData && questionValue && listeningData[questionValue]) {
+    const selectedData = listeningData?.find((item) => item.query === questionValue);
+    if (selectedData) {
       const newData: ListeningQuizData[] = [];
-      for (const value of listeningData[questionValue]) {
-        newData.push(cleanUpResult(value) as ListeningQuizData);
+      for (const item of selectedData.responses) {
+        newData.push(cleanUpResult(item));
       }
       setAllQuizData(newData);
     }
@@ -129,9 +142,10 @@ const AskListeningQuestion = () => {
     setShowCachedQuestions(false);
 
     updateCountCacheQuestions(question);
-    if (listeningData?.[question]?.[selectedCacheIndex]) {
+    const selectedData = listeningData?.find((item) => item.query === question);
+    if (selectedData?.responses?.[selectedCacheIndex]) {
       const cleanedResult = cleanUpResult(
-        listeningData[question][selectedCacheIndex]
+        selectedData.responses[selectedCacheIndex]
       );
       setQuizData(cleanedResult);
     } else {
@@ -164,17 +178,6 @@ const AskListeningQuestion = () => {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to fetch quiz data");
       }
-
-      const data = await response.json();
-
-      // Update state with new response
-      setListeningData(
-        (prevData) =>
-          ({
-            ...prevData,
-            [prompt]: [...(prevData[prompt] || []), data],
-          } as Record<string, Array<unknown>>)
-      );
 
       updateCountCacheQuestions(prompt);
     } catch (error) {
@@ -225,7 +228,7 @@ const AskListeningQuestion = () => {
                 question.length > 50
                   ? question.substring(0, 50) + "..."
                   : question;
-              const lengthData = listeningData?.[question]?.length || 0;
+              const lengthData = listeningData?.find((item) => item.query === question)?.responses.length || 0;
               return (
                 <button
                   key={index}
