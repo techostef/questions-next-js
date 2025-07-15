@@ -8,9 +8,10 @@ const tabs = [
   { name: "Chat", path: "/chat" },
   { name: "Speak", path: "/speak" },
   { name: "Bank English", path: "/bank-english" },
+  { name: "Image Generator", path: "/image-generator" },
 ];
 
-export default function Navigation() {
+export default function Navigation({ activeItem }: { activeItem?: string }) {
   const router = useRouter();
   return (
     <nav className="mb-6">
@@ -19,7 +20,7 @@ export default function Navigation() {
           <li className="mr-2" key={tab.path}>
             <Button
               onClick={() => router.push(tab.path)}
-              variant="text"
+              variant={activeItem === tab.path.substring(1) ? "secondary" : "text"}
               size="small"
             >
               {tab.name}
