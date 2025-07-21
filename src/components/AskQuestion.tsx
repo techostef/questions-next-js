@@ -79,7 +79,8 @@ const AskQuestion = () => {
 
   const updateCountCacheQuestions = useCallback(
     (customQuestion?: string) => {
-      const selectedData = data?.find((item) => item.query === customQuestion || questionValue);
+      const selectedDataIndex = data?.findIndex((item) => item.query === customQuestion || item.query ===questionValue);
+      const selectedData = data?.[selectedDataIndex];
       setCountCacheQuestions(
         selectedData?.responses?.length || 0
       );
